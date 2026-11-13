@@ -1,7 +1,7 @@
 // "Skenovat": cards from the camera straight into the collection.
 // iPhone: the system document camera (finds the card edges, can scan a whole stack),
 // text read by Vision in any language. Web: live camera with a card-shaped guide, or a photo.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { entryPrice, formatPrice, type CardPrinting, type Deck, type DeckBoard, type Finish } from './cardData';
@@ -335,7 +335,7 @@ const toCardPixels = (source: CanvasImageSource, area: { x: number; y: number; w
 };
 
 function WebCamera({ onCapture }: { onCapture: (card: Pixels) => void }) {
-  const host = useRef<View>(null);
+  const host = useRef<ComponentRef<typeof View>>(null);
   const video = useRef<HTMLVideoElement | null>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const [state, setState] = useState<'starting' | 'ready' | 'unavailable'>('starting');

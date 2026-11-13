@@ -65,7 +65,7 @@ export const signInWithProvider = async (provider: OAuthProvider) => {
 };
 
 /** Finishes a Google/Facebook sign-in when the phone app is opened via karticky://auth-callback?code=… */
-export const completeSignInFromUrl = async (url: string | null): Promise<string | null> => {
+export const completeSignInFromUrl = async (url: string | null | undefined): Promise<string | null> => {
   if (!url || !url.startsWith(NATIVE_REDIRECT) || !supabase) return null;
   const params = new URL(url).searchParams;
   const failure = params.get('error_description') ?? params.get('error');
@@ -78,7 +78,7 @@ export const completeSignInFromUrl = async (url: string | null): Promise<string 
 
 export const listenForSignInLinks = (onError: (message: string) => void) => {
   if (Platform.OS === 'web') return () => undefined;
-  const handle = (url: string | null) => void completeSignInFromUrl(url).then(message => { if (message) onError(message); });
+  const handle = (url: string | null | undefined) => void completeSignInFromUrl(url).then(message => { if (message) onError(message); });
   void Linking.getInitialURL().then(handle);
   const subscription = Linking.addEventListener('url', event => handle(event.url));
   return () => subscription.remove();
