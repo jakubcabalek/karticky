@@ -38,6 +38,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - run: npm run web:build
+      - name: Check Cloudflare settings (length and shape only, never the value)
+        if: github.ref == 'refs/heads/claude/diagnose-token'
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          check() {
+            local name="$1" value="$2"
+            echo "$name: length ${#value}"
+            [[ "$value" =~ [[:space:]] ]] && echo "$name: contains spaces or line breaks"
+            [[ "$value" == Bearer* ]] && echo "$name: starts with the word Bearer"
+            [[ "$value" == *curl* ]] && echo "$name: contains a curl command"
+            [[ "$value" =~ [^A-Za-z0-9_-] ]] && echo "$name: contains characters other than letters, digits, - and _"
+            true
+          }
+          check token "$TOKEN"
+          check account "$ACCOUNT"
+          [[ "$ACCOUNT" =~ ^[0-9a-f]{32}$ ]] && echo "account: looks like an account ID" || echo "account: does NOT look like a 32-character account ID"
       - name: Deploy to Cloudflare Pages
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request' && vars.CLOUD_DEPLOY_READY == 'true'
         uses: cloudflare/wrangler-action@v4
