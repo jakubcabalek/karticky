@@ -76,7 +76,7 @@ export default function App() {
   const [syncState, setSyncState] = useState<SyncState>('off');
   const [authError, setAuthError] = useState('');
   const libraryRef = useRef(library);
-  libraryRef.current = library;
+  useEffect(() => { libraryRef.current = library; }, [library]);
   const revision = useRef<number | null>(null);
   const lastSynced = useRef<Library | null>(null);
   const syncedUser = useRef<string | null>(null);
@@ -89,26 +89,27 @@ export default function App() {
     return () => { subscription.unsubscribe(); stopLinks(); };
   }, []);
 
-  const push = useCallback(async (userId: string, attempt = 0): Promise<void> => {
-    const current = libraryRef.current;
-    if (lastSynced.current && sameLibrary(current, lastSynced.current)) { setSyncState('synced'); return; }
-    setSyncState('syncing');
-    const result = await writeCloudLibrary(userId, revision.current, current);
-    if ('saved' in result) {
-      revision.current = result.saved.revision;
-      lastSynced.current = current;
-      setSyncState('synced');
-      return;
+  const push = useCallback(async (userId: string): Promise<void> => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const current = libraryRef.current;
+      if (lastSynced.current && sameLibrary(current, lastSynced.current)) { setSyncState('synced'); return; }
+      setSyncState('syncing');
+      const result = await writeCloudLibrary(userId, revision.current, current);
+      if ('saved' in result) {
+        revision.current = result.saved.revision;
+        lastSynced.current = current;
+        setSyncState('synced');
+        return;
+      }
+      // Another device saved in between: merge its version in and try again.
+      revision.current = result.conflict?.revision ?? null;
+      if (result.conflict) {
+        const merged = mergeLibraries(libraryRef.current, result.conflict.library);
+        libraryRef.current = merged;
+        setLibrary(merged);
+      }
     }
-    // Another device saved in between: merge its version in and try again.
-    revision.current = result.conflict?.revision ?? null;
-    if (result.conflict) {
-      const merged = mergeLibraries(libraryRef.current, result.conflict.library);
-      libraryRef.current = merged;
-      setLibrary(merged);
-    }
-    if (attempt < 2) await push(userId, attempt + 1);
-    else setSyncState('error');
+    setSyncState('error');
   }, []);
 
   const pull = useCallback(async (userId: string) => {
@@ -133,7 +134,7 @@ export default function App() {
   const userId = session?.user.id ?? null;
   useEffect(() => {
     if (!loaded) return;
-    if (!userId) { syncedUser.current = null; revision.current = null; lastSynced.current = null; setSyncState('off'); return; }
+    if (!userId) { syncedUser.current = null; revision.current = null; lastSynced.current = null; return; }
     if (syncedUser.current === userId) return;
     syncedUser.current = userId;
     void pull(userId);
