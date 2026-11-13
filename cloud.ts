@@ -1,6 +1,6 @@
 // Account and sync (Supabase, like Fakturo). The app works without an account;
 // signing in keeps the collection, wishlist and decks the same on the web and the phone.
-// Sign-in: Google, Facebook, or e-mail and password.
+// Sign-in: Apple, Google, Facebook, or e-mail and password.
 import 'react-native-url-polyfill/auto';
 import { AppState, Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,7 +8,7 @@ import { createClient, type Session, type SupabaseClient } from '@supabase/supab
 import { normalizeLibrary, type Library } from './cardData';
 
 export type { Session };
-export type OAuthProvider = 'google' | 'facebook';
+export type OAuthProvider = 'apple' | 'google' | 'facebook';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '';
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? '';

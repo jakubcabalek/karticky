@@ -24,6 +24,13 @@ export type CardPrinting = {
   keywords?: string[];
   power?: string;
   toughness?: string;
+  /** Mana value (converted mana cost). */
+  cmc?: number;
+  /** Colours of the card and its colour identity (Commander), e.g. ["G", "U"]. */
+  colors?: string[];
+  colorIdentity?: string[];
+  /** Format legality from Scryfall: "legal", "not_legal", "banned", "restricted". */
+  legalities?: Record<string, string>;
   imageSmall?: string;
   imageNormal?: string;
   prices: CardPrices;
@@ -31,14 +38,30 @@ export type CardPrinting = {
 };
 
 export type Finish = 'nonfoil' | 'foil';
-export type CardEntry = { key: string; card: CardPrinting; quantity: number; finish: Finish; addedAt: string };
-export type DeckBoard = 'main' | 'sideboard';
-export type Deck = { id: string; name: string; main: CardEntry[]; sideboard: CardEntry[]; createdAt: string; updatedAt: string };
+/** `targetPrice` (wishlist): tell me when the card costs this much or less, in EUR. */
+export type CardEntry = { key: string; card: CardPrinting; quantity: number; finish: Finish; addedAt: string; targetPrice?: number };
+export type DeckBoard = 'commander' | 'main' | 'sideboard';
+export const DECK_BOARDS: DeckBoard[] = ['commander', 'main', 'sideboard'];
+export type DeckFormat = 'commander' | 'standard' | 'pioneer' | 'modern' | 'legacy' | 'vintage' | 'pauper' | 'casual';
+export const DECK_FORMATS: { id: DeckFormat; label: string }[] = [
+  { id: 'commander', label: 'Commander' }, { id: 'standard', label: 'Standard' }, { id: 'pioneer', label: 'Pioneer' },
+  { id: 'modern', label: 'Modern' }, { id: 'legacy', label: 'Legacy' }, { id: 'vintage', label: 'Vintage' },
+  { id: 'pauper', label: 'Pauper' }, { id: 'casual', label: 'Bez pravidel' },
+];
+export type Deck = {
+  id: string; name: string; format: DeckFormat;
+  commander: CardEntry[]; main: CardEntry[]; sideboard: CardEntry[];
+  createdAt: string; updatedAt: string;
+};
 /**
  * `deleted` remembers what was removed and when (keys "c:…" collection, "w:…" wishlist,
  * "d:…" deck), so syncing with another device does not bring removed cards back.
  */
-export type Library = { version: 1; collection: CardEntry[]; wishlist: CardEntry[]; decks: Deck[]; deleted?: Record<string, string> };
+export type Library = {
+  version: 1; collection: CardEntry[]; wishlist: CardEntry[]; decks: Deck[]; deleted?: Record<string, string>;
+  /** When card prices were last refreshed from Scryfall (they change once a day). */
+  pricesUpdatedAt?: string;
+};
 export type PriceCurrency = 'eur' | 'usd';
 
 export const emptyLibrary = (): Library => ({ version: 1, collection: [], wishlist: [], decks: [] });
@@ -94,10 +117,20 @@ const cardIdentity = (card: CardPrinting) => card.oracleId ?? card.name.toLowerC
 export const copiesOf = (list: CardEntry[], card: CardPrinting) =>
   list.filter(entry => cardIdentity(entry.card) === cardIdentity(card)).reduce((sum, entry) => sum + entry.quantity, 0);
 
-export const createDeck = (library: Library, name: string, { id, now }: { id: string; now: string }): Library => ({
+export const createDeck = (
+  library: Library,
+  name: string,
+  { id, now, format = 'commander' }: { id: string; now: string; format?: DeckFormat },
+): Library => ({
   ...library,
-  decks: [...library.decks, { id, name: name.trim() || 'Nový balíček', main: [], sideboard: [], createdAt: now, updatedAt: now }],
+  decks: [...library.decks, { id, name: name.trim() || 'Nový balíček', format, commander: [], main: [], sideboard: [], createdAt: now, updatedAt: now }],
 });
+
+/** The change for one part of a deck, for updateDeck. */
+export const boardChange = (board: DeckBoard, entries: CardEntry[]): Partial<Deck> =>
+  board === 'commander' ? { commander: entries } : board === 'main' ? { main: entries } : { sideboard: entries };
+
+export const deckEntries = (deck: Deck) => [...deck.commander, ...deck.main, ...deck.sideboard];
 
 export const updateDeck = (library: Library, deckId: string, change: (deck: Deck) => Partial<Deck>, now: string): Library => ({
   ...library,
@@ -115,7 +148,7 @@ export const deleteDeck = (library: Library, deckId: string): Library => ({
  */
 export const missingForDeck = (deck: Deck, collection: CardEntry[]): { card: CardPrinting; missing: number }[] => {
   const needed = new Map<string, { card: CardPrinting; count: number }>();
-  for (const entry of [...deck.main, ...deck.sideboard]) {
+  for (const entry of deckEntries(deck)) {
     const id = cardIdentity(entry.card);
     const current = needed.get(id);
     needed.set(id, { card: current?.card ?? entry.card, count: (current?.count ?? 0) + entry.quantity });
@@ -158,9 +191,11 @@ const entries = (value: unknown) => Array.isArray(value) ? value.filter(isEntry)
 
 export const normalizeLibrary = (value: unknown): Library => {
   if (!isRecord(value)) return emptyLibrary();
-  const decks = Array.isArray(value.decks) ? value.decks.filter(isRecord).filter(deck => typeof deck.id === 'string').map(deck => ({
+  const decks: Deck[] = Array.isArray(value.decks) ? value.decks.filter(isRecord).filter(deck => typeof deck.id === 'string').map(deck => ({
     id: deck.id as string,
     name: typeof deck.name === 'string' ? deck.name : 'Balíček',
+    format: DECK_FORMATS.some(f => f.id === deck.format) ? deck.format as DeckFormat : 'casual',
+    commander: entries(deck.commander),
     main: entries(deck.main),
     sideboard: entries(deck.sideboard),
     createdAt: typeof deck.createdAt === 'string' ? deck.createdAt : '',
@@ -168,8 +203,47 @@ export const normalizeLibrary = (value: unknown): Library => {
   })) : [];
   const deleted: Record<string, string> = {};
   if (isRecord(value.deleted)) for (const [key, at] of Object.entries(value.deleted)) if (typeof at === 'string') deleted[key] = at;
-  return { version: 1, collection: entries(value.collection), wishlist: entries(value.wishlist), decks, deleted };
+  return {
+    version: 1, collection: entries(value.collection), wishlist: entries(value.wishlist), decks, deleted,
+    ...(typeof value.pricesUpdatedAt === 'string' ? { pricesUpdatedAt: value.pricesUpdatedAt } : {}),
+  };
 };
+
+// ---- Fresh card data and wishlist price watch ----
+
+/** Replaces saved card data (prices, legality …) with fresh data from Scryfall, matched by id. */
+export const refreshCards = (library: Library, fresh: CardPrinting[], now: string): Library => {
+  const byId = new Map(fresh.map(card => [card.id, card]));
+  const update = (list: CardEntry[]) => list.map(entry => byId.has(entry.card.id) ? { ...entry, card: byId.get(entry.card.id) as CardPrinting } : entry);
+  return {
+    ...library,
+    collection: update(library.collection),
+    wishlist: update(library.wishlist),
+    decks: library.decks.map(deck => ({ ...deck, commander: update(deck.commander), main: update(deck.main), sideboard: update(deck.sideboard) })),
+    pricesUpdatedAt: now,
+  };
+};
+
+/** Every card id in the library, for one refresh request. */
+export const libraryCardIds = (library: Library) =>
+  [...new Set([...library.collection, ...library.wishlist, ...library.decks.flatMap(deckEntries)].map(entry => entry.card.id))];
+
+/** Prices are refreshed at most once a day, like Scryfall updates them. */
+export const pricesAreStale = (library: Library, now: string) =>
+  !library.pricesUpdatedAt || Date.parse(now) - Date.parse(library.pricesUpdatedAt) > 20 * 3_600_000;
+
+/** Wished cards that now cost the target price or less. */
+export const priceAlerts = (wishlist: CardEntry[]) => wishlist
+  .map(entry => ({ entry, price: entryPrice(entry, 'eur') }))
+  .filter((item): item is { entry: CardEntry; price: number } =>
+    item.entry.targetPrice !== undefined && item.price !== null && item.price <= item.entry.targetPrice);
+
+export const setTargetPrice = (list: CardEntry[], key: string, target: number | null): CardEntry[] =>
+  list.map(entry => {
+    if (entry.key !== key) return entry;
+    const { targetPrice: _old, ...rest } = entry;
+    return target !== null && Number.isFinite(target) && target > 0 ? { ...rest, targetPrice: Math.round(target * 100) / 100 } : rest;
+  });
 
 const TOMBSTONE_DAYS = 120;
 

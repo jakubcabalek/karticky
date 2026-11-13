@@ -23,9 +23,10 @@ Data jsou uložená v zařízení (AsyncStorage, na webu v prohlížeči). Úče
 3. Supabase → Authentication → URL Configuration: Site URL `https://karticky.pages.dev`, Redirect URLs `https://karticky.pages.dev/**`, `http://localhost:8081/**` a `karticky://auth-callback`.
 4. **Google:** Google Cloud Console → APIs & Services → OAuth consent screen (externí, název Kartičky), pak Credentials → OAuth client ID typu Web application. Authorized redirect URI: `https://<projekt>.supabase.co/auth/v1/callback`. Client ID a Secret vložit do Supabase → Authentication → Providers → Google.
 5. **Facebook:** developers.facebook.com → nová aplikace s Facebook Login. Valid OAuth Redirect URIs: stejná adresa `…/auth/v1/callback`. Aplikace potřebuje odkaz na zásady ochrany osobních údajů a na smazání dat a musí být přepnutá do režimu Live, jinak se přihlásí jen správci aplikace. App ID a App Secret vložit do Supabase → Providers → Facebook.
-6. Vyzkoušet na webu i v telefonu: přihlásit se, přidat kartu, zkontrolovat ji na druhém zařízení.
+6. **Apple:** developer.apple.com → Certificates, IDs & Profiles: u App ID `com.jakubcabalek.karticky` zapnout Sign in with Apple; vytvořit Services ID (např. `com.jakubcabalek.karticky.web`) s doménou `<projekt>.supabase.co` a Return URL `https://<projekt>.supabase.co/auth/v1/callback`; vytvořit Key se Sign in with Apple. V Supabase → Providers → Apple vyplnit Services ID, Team ID, Key ID a klíč (Supabase z něj vytvoří secret, ten platí 6 měsíců – obnovit včas).
+7. Vyzkoušet na webu i v telefonu: přihlásit se, přidat kartu, zkontrolovat ji na druhém zařízení.
 
-Na iPhonu se Google a Facebook otevřou v Safari a vrátí se do aplikace přes `karticky://auth-callback` (schéma je v `app.json`, potřebuje nový build). **App Store:** aplikace, která nabízí přihlášení přes Google nebo Facebook, musí podle pravidel Applu nabídnout i Sign in with Apple. Pro vlastní testování v TestFlightu to nevadí, před vydáním do App Store je potřeba ho doplnit.
+Na iPhonu se Google a Facebook otevřou v Safari a vrátí se do aplikace přes `karticky://auth-callback` (schéma je v `app.json`, potřebuje nový build). Apple, Google i Facebook jdou stejnou cestou přes Supabase. Sign in with Apple je kvůli pravidlům App Store (kdo nabízí Google nebo Facebook, musí nabídnout i Apple).
 
 ## Skenování karet
 

@@ -56,3 +56,10 @@ test('common sign-in errors are explained in Czech', () => {
   assert.equal(cloud.authErrorText(new Error('Invalid login credentials')), 'Špatný e-mail nebo heslo.');
   assert.match(cloud.authErrorText(new Error('Unsupported provider: provider is not enabled')), /není zapnuté/);
 });
+
+test('Sign in with Apple goes the same way as Google', async () => {
+  const { cloud, calls } = loadCloud();
+  await cloud.signInWithProvider('apple');
+  assert.equal(calls.oauth[0].provider, 'apple');
+  assert.equal(calls.oauth[0].options.redirectTo, 'karticky://auth-callback');
+});

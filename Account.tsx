@@ -1,4 +1,4 @@
-// "Účet" in Profile: optional. Google, Facebook, or e-mail and password.
+// "Účet" in Profile: optional. Apple, Google, Facebook, or e-mail and password.
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import {
@@ -9,14 +9,16 @@ import { SmallButton, s } from './ui';
 
 export type SyncState = 'off' | 'syncing' | 'synced' | 'error';
 
+// Apple first: App Store rules require Sign in with Apple next to Google and Facebook.
 const PROVIDERS: { id: OAuthProvider; label: string; bg: string; fg: string; border?: string }[] = [
+  { id: 'apple', label: 'Pokračovat přes Apple', bg: '#000000', fg: '#FFFFFF' },
   { id: 'google', label: 'Pokračovat přes Google', bg: '#FFFFFF', fg: '#1F1F1F', border: '#DADCE0' },
   { id: 'facebook', label: 'Pokračovat přes Facebook', bg: '#1877F2', fg: '#FFFFFF' },
 ];
 
 const providerName = (session: Session) => {
   const provider = session.user.app_metadata?.provider;
-  return provider === 'google' ? 'Google' : provider === 'facebook' ? 'Facebook' : 'e-mail';
+  return provider === 'apple' ? 'Apple' : provider === 'google' ? 'Google' : provider === 'facebook' ? 'Facebook' : 'e-mail';
 };
 
 export default function Account({ session, syncState, externalError }: { session: Session | null; syncState: SyncState; externalError?: string }) {

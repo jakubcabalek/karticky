@@ -6,8 +6,10 @@ import { appRevision, isDevelopmentVersion, versionUrl } from './appVersion';
 import { developmentFeatures, readDevelopmentFeatures, saveDevelopmentFeatures } from './devFeatures';
 import { saveNativeAppChannel } from './nativeRuntime';
 import { loadLibrary, saveLibrary } from './libraryStorage';
-import { searchCards } from './scryfall';
+import { fetchCollection, searchCards } from './scryfall';
 import ScanScreen from './ScanScreen';
+import DecksScreen, { BOARD_NAMES, boardsFor } from './DecksScreen';
+import WishlistScreen from './WishlistScreen';
 import ShopPrices from './ShopPrices';
 import CardExplain from './CardExplain';
 import LifeScreen from './LifeScreen';
@@ -15,9 +17,10 @@ import Account, { type SyncState } from './Account';
 import { listenForSignInLinks, readCloudLibrary, supabase, writeCloudLibrary, type Session } from './cloud';
 import { CardRow, EntryCard, SmallButton, SwitchRow, s } from './ui';
 import {
-  addCard, copiesOf, createDeck, deleteDeck, emptyLibrary, formatPrice, listValue, markWishAcquired, mergeLibraries, recordDeletions, sameLibrary,
-  missingForDeck, setQuantity, totalCards, updateDeck, wishMissingCards,
-  type CardEntry, type CardPrinting, type DeckBoard, type Library,
+  addCard, boardChange, copiesOf, createDeck, emptyLibrary, formatPrice, libraryCardIds, listValue, markWishAcquired, mergeLibraries,
+  priceAlerts, pricesAreStale, recordDeletions, refreshCards, sameLibrary, setTargetPrice,
+  setQuantity, totalCards, updateDeck,
+  type CardEntry, type CardPrinting, type Library,
 } from './cardData';
 
 type Tab = 'scan' | 'search' | 'collection' | 'decks' | 'wishlist' | 'life' | 'profile';
@@ -33,7 +36,6 @@ const allTabs: { key: Tab; label: string }[] = [
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const nowIso = () => new Date().toISOString();
-const boardUpdate = (board: DeckBoard, entries: CardEntry[]) => board === 'main' ? { main: entries } : { sideboard: entries };
 
 export default function App() {
   const insets = useSafeAreaInsets();
@@ -54,6 +56,19 @@ export default function App() {
     if (loaded) void saveLibrary(library);
   }, [library, loaded]);
 
+  // Prices change once a day on Scryfall: refresh the whole library at most once a day.
+  useEffect(() => {
+    if (!loaded || !pricesAreStale(library, nowIso())) return;
+    const ids = libraryCardIds(library);
+    if (!ids.length) return;
+    void fetchCollection(ids.map(id => ({ id })))
+      .then(({ found }) => setLibrary(current => refreshCards(current, found, nowIso())))
+      .catch(() => undefined);
+    // Once per load; the stamp stops it from repeating.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  const alerts = priceAlerts(library.wishlist).length;
   const change = useCallback((update: (current: Library) => Library) => setLibrary(current => recordDeletions(current, update(current), nowIso())), []);
 
   // ---- Account and sync: optional; signed in, the library is the same on every device ----
@@ -166,7 +181,7 @@ export default function App() {
                   const options = { finish, now: nowIso() };
                   if (target.kind === 'collection') return { ...lib, collection: addCard(lib.collection, card, options) };
                   if (target.kind === 'wishlist') return { ...lib, wishlist: addCard(lib.wishlist, card, options) };
-                  return updateDeck(lib, target.deckId, deck => boardUpdate(target.board, addCard(deck[target.board], card, options)), nowIso());
+                  return updateDeck(lib, target.deckId, deck => boardChange(target.board, addCard(deck[target.board], card, options)), nowIso());
                 })}
               />
             )}
@@ -191,13 +206,13 @@ export default function App() {
               />
             )}
             {tab === 'wishlist' && (
-              <EntryListScreen
-                title="Wishlist"
-                empty="Karty, které sháníš. Přidáš je z Hledat, nebo z balíčku tlačítkem „Chybějící do wishlistu“."
+              <WishlistScreen
                 entries={library.wishlist}
                 showPrices={showPrices}
+                pricesUpdatedAt={library.pricesUpdatedAt}
                 onQuantity={(key, quantity) => change(lib => ({ ...lib, wishlist: setQuantity(lib.wishlist, key, quantity) }))}
-                action={{ label: 'Mám ji', onPress: key => change(lib => markWishAcquired(lib, key, nowIso())) }}
+                onTarget={(key, target) => change(lib => ({ ...lib, wishlist: setTargetPrice(lib.wishlist, key, target) }))}
+                onAcquired={key => change(lib => markWishAcquired(lib, key, nowIso()))}
               />
             )}
             {tab === 'decks' && (
@@ -225,7 +240,7 @@ export default function App() {
       <View style={[s.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         {tabs.map(item => (
           <Pressable key={item.key} accessibilityRole="tab" accessibilityState={{ selected: tab === item.key }} style={s.tab} onPress={() => setTab(item.key)}>
-            <Text style={[s.tabText, tab === item.key && s.tabTextActive]}>{item.label}</Text>
+            <Text style={[s.tabText, tab === item.key && s.tabTextActive]}>{item.label}{item.key === 'wishlist' && alerts ? ` (${alerts})` : ''}</Text>
           </Pressable>
         ))}
       </View>
@@ -234,18 +249,18 @@ export default function App() {
           <View style={s.sheet}>
             <Text style={s.sheetTitle}>Do kterého balíčku?</Text>
             {library.decks.length === 0 && <Text style={s.muted}>Zatím nemáš žádný balíček. Založ ho v záložce Balíčky.</Text>}
-            {library.decks.map(deck => (['main', 'sideboard'] as DeckBoard[]).map(board => (
+            {library.decks.map(deck => boardsFor(deck).map(board => (
               <Pressable
                 key={`${deck.id}-${board}`}
                 style={s.sheetRow}
                 onPress={() => {
                   const card = deckPickerCard;
-                  if (card) change(lib => updateDeck(lib, deck.id, d => boardUpdate(board, addCard(d[board], card, { now: nowIso() })), nowIso()));
+                  if (card) change(lib => updateDeck(lib, deck.id, d => boardChange(board, addCard(d[board], card, { now: nowIso() })), nowIso()));
                   setDeckPickerCard(null);
                 }}
               >
                 <Text style={s.rowTitle}>{deck.name}</Text>
-                <Text style={s.muted}>{board === 'main' ? 'Hlavní balíček' : 'Sideboard'}</Text>
+                <Text style={s.muted}>{BOARD_NAMES[board]}</Text>
               </Pressable>
             )))}
           </View>
@@ -334,70 +349,6 @@ function EntryListScreen({ title, empty, entries, showPrices, onQuantity, action
       {entries.length === 0 && <Text style={s.empty}>{empty}</Text>}
       {entries.map(entry => (
         <EntryCard key={entry.key} entry={entry} showPrices={showPrices} onQuantity={quantity => onQuantity(entry.key, quantity)} action={action && { label: action.label, onPress: () => action.onPress(entry.key) }} />
-      ))}
-    </ScrollView>
-  );
-}
-
-function DecksScreen({ library, showPrices, openDeckId, onOpen, change }: {
-  library: Library;
-  showPrices: boolean;
-  openDeckId: string | null;
-  onOpen: (id: string | null) => void;
-  change: (update: (current: Library) => Library) => void;
-}) {
-  const [name, setName] = useState('');
-  const deck = library.decks.find(item => item.id === openDeckId);
-
-  if (deck) {
-    const missing = missingForDeck(deck, library.collection);
-    const boardChange = (board: DeckBoard) => (key: string, quantity: number) =>
-      change(lib => updateDeck(lib, deck.id, d => boardUpdate(board, setQuantity(d[board], key, quantity)), nowIso()));
-    return (
-      <ScrollView contentContainerStyle={s.screen}>
-        <Pressable onPress={() => onOpen(null)}><Text style={s.link}>‹ Všechny balíčky</Text></Pressable>
-        <Text style={s.title}>{deck.name}</Text>
-        <Text style={s.muted}>
-          Hlavní {totalCards(deck.main)} · Sideboard {totalCards(deck.sideboard)}
-          {showPrices ? ` · hodnota ${formatPrice(listValue([...deck.main, ...deck.sideboard], 'eur').total, 'eur')}` : ''}
-        </Text>
-        {missing.length > 0 ? (
-          <View style={s.notice}>
-            <Text style={s.rowTitle}>Chybí ti {missing.reduce((sum, item) => sum + item.missing, 0)} karet</Text>
-            <Text style={s.muted}>{missing.map(item => `${item.missing}× ${item.card.name}`).join(', ')}</Text>
-            <SmallButton label="Chybějící do wishlistu" onPress={() => change(lib => wishMissingCards(lib, deck.id, nowIso()))} />
-          </View>
-        ) : deck.main.length > 0 ? <Text style={s.muted}>Všechny karty máš ve sbírce.</Text> : null}
-        {(['main', 'sideboard'] as DeckBoard[]).map(board => (
-          <View key={board} style={s.section}>
-            <Text style={s.sectionTitle}>{board === 'main' ? 'Hlavní balíček' : 'Sideboard'}</Text>
-            {deck[board].length === 0 && <Text style={s.muted}>Karty přidáš z Hledat tlačítkem „+ Balíček“.</Text>}
-            {deck[board].map(entry => <EntryCard key={entry.key} entry={entry} showPrices={showPrices} onQuantity={q => boardChange(board)(entry.key, q)} />)}
-          </View>
-        ))}
-        <SmallButton label="Smazat balíček" danger onPress={() => { change(lib => deleteDeck(lib, deck.id)); onOpen(null); }} />
-      </ScrollView>
-    );
-  }
-
-  return (
-    <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
-      <Text style={s.title}>Balíčky</Text>
-      <View style={s.row}>
-        <TextInput style={[s.input, s.grow]} value={name} onChangeText={setName} placeholder="Název nového balíčku" />
-        <SmallButton label="Založit" onPress={() => {
-          const id = newId();
-          change(lib => createDeck(lib, name, { id, now: nowIso() }));
-          setName('');
-          onOpen(id);
-        }} />
-      </View>
-      {library.decks.length === 0 && <Text style={s.empty}>Zatím žádný balíček.</Text>}
-      {library.decks.map(item => (
-        <Pressable key={item.id} style={s.card} onPress={() => onOpen(item.id)}>
-          <Text style={s.rowTitle}>{item.name}</Text>
-          <Text style={s.muted}>{totalCards(item.main)} karet · chybí {missingForDeck(item, library.collection).reduce((sum, m) => sum + m.missing, 0)}</Text>
-        </Pressable>
       ))}
     </ScrollView>
   );

@@ -6,14 +6,16 @@ import type { CardPrinting } from './cardData';
 const API = 'https://api.scryfall.com';
 const PACE_MS = 100;
 
-type Fetch = (url: string, init?: { headers?: Record<string, string> }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+type Fetch = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
 let lastRequest = 0;
-const paced = async (fetchImpl: Fetch, url: string) => {
+const paced = async (fetchImpl: Fetch, url: string, body?: unknown) => {
   const wait = lastRequest + PACE_MS - Date.now();
   if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
   lastRequest = Date.now();
-  return fetchImpl(url, { headers: { Accept: 'application/json' } });
+  return body === undefined
+    ? fetchImpl(url, { headers: { Accept: 'application/json' } })
+    : fetchImpl(url, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 };
 
 const defaultFetch: Fetch = (url, init) => fetch(url, init);
@@ -23,6 +25,7 @@ const price = (value: unknown) => {
   const number = typeof value === 'string' ? Number(value) : NaN;
   return Number.isFinite(number) ? number : undefined;
 };
+const strings = (value: unknown) => Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
 const record = (value: unknown): Record<string, unknown> => typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
 
 /** Turns a Scryfall card object into our printing. Double-faced cards use the front face's image. */
@@ -48,6 +51,12 @@ export const parseCard = (raw: unknown): CardPrinting => {
     keywords: Array.isArray(card.keywords) ? card.keywords.filter((k): k is string => typeof k === 'string') : undefined,
     power: text(card.power) || text(faces[0]?.power) || undefined,
     toughness: text(card.toughness) || text(faces[0]?.toughness) || undefined,
+    cmc: typeof card.cmc === 'number' ? card.cmc : undefined,
+    colors: strings(card.colors ?? faces[0]?.colors),
+    colorIdentity: strings(card.color_identity),
+    legalities: Object.keys(record(card.legalities)).length
+      ? Object.fromEntries(Object.entries(record(card.legalities)).filter(([, v]) => typeof v === 'string')) as Record<string, string>
+      : undefined,
     imageSmall: text(images.small) || undefined,
     imageNormal: text(images.normal) || undefined,
     prices: { eur: price(prices.eur), eurFoil: price(prices.eur_foil), usd: price(prices.usd), usdFoil: price(prices.usd_foil) },
@@ -75,6 +84,29 @@ export const cardBySetNumber = async (set: string, number: string, lang = '', fe
   if (response.status === 404) return null;
   if (!response.ok) throw new ScryfallError(`Scryfall odpověděl ${response.status}.`);
   return parseCard(await response.json());
+};
+
+export type CardIdentifier = { id: string } | { name: string; set?: string } | { set: string; collector_number: string };
+
+/**
+ * Many cards in as few requests as possible (75 per request): decklist imports and the
+ * daily price refresh. Returns found cards in request order and what was not found.
+ */
+export const fetchCollection = async (
+  identifiers: CardIdentifier[],
+  fetchImpl: Fetch = defaultFetch,
+): Promise<{ found: CardPrinting[]; notFound: CardIdentifier[] }> => {
+  const found: CardPrinting[] = [];
+  const notFound: CardIdentifier[] = [];
+  for (let i = 0; i < identifiers.length; i += 75) {
+    const batch = identifiers.slice(i, i + 75);
+    const response = await paced(fetchImpl, `${API}/cards/collection`, { identifiers: batch });
+    if (!response.ok) throw new ScryfallError(`Scryfall odpověděl ${response.status}.`);
+    const body = record(await response.json());
+    if (Array.isArray(body.data)) found.push(...body.data.map(parseCard));
+    if (Array.isArray(body.not_found)) notFound.push(...(body.not_found as CardIdentifier[]));
+  }
+  return { found, notFound };
 };
 
 /** One printing by its Scryfall id (what the scan index stores). */

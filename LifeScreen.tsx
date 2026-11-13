@@ -244,10 +244,11 @@ function PlayerSheet({ game, player, play, onClose }: { game: Game; player: Play
 }
 
 function GameSetup({ previous, onStart, onCancel }: { previous: Game | null; onStart: (game: Game) => void; onCancel?: () => void }) {
-  const [players, setPlayers] = useState(previous?.players.length ?? 2);
-  const [startingLife, setStartingLife] = useState(previous?.startingLife ?? 20);
+  // Commander is the default: 4 players, 40 life.
+  const [players, setPlayers] = useState(previous?.players.length ?? 4);
+  const [startingLife, setStartingLife] = useState(previous?.startingLife ?? 40);
   const [customLife, setCustomLife] = useState('');
-  const [commander, setCommander] = useState(previous?.commander ?? false);
+  const [commander, setCommander] = useState(previous?.commander ?? true);
   const [names, setNames] = useState<string[]>(previous?.players.map(p => p.name) ?? []);
 
   const chooseLife = (value: number) => {

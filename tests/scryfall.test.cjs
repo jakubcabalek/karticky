@@ -69,3 +69,20 @@ test('rules text, keywords and power/toughness are kept, both faces for double-f
   assert.deepEqual(card.keywords, ['Flying']);
   assert.equal(`${card.power}/${card.toughness}`, '2/3');
 });
+
+test('collections are asked for in batches of 75 by POST and report what was not found', async () => {
+  const bodies = [];
+  const ids = Array.from({ length: 80 }, (_, i) => ({ name: `Card ${i}` }));
+  const result = await scryfall.fetchCollection(ids, async (url, init) => {
+    assert.equal(init.method, 'POST');
+    const body = JSON.parse(init.body);
+    bodies.push(body.identifiers.length);
+    return response(200, { data: body.identifiers.slice(1).map(x => ({ id: x.name, name: x.name, cmc: 2, color_identity: ['G'], legalities: { commander: 'legal' } })), not_found: [body.identifiers[0]] });
+  });
+  assert.deepEqual(bodies, [75, 5]);
+  assert.equal(result.found.length, 78);
+  assert.deepEqual(plain(result.notFound).map(x => x.name), ['Card 0', 'Card 75']);
+  assert.equal(result.found[0].cmc, 2);
+  assert.deepEqual(plain(result.found[0].colorIdentity), ['G']);
+  assert.equal(result.found[0].legalities.commander, 'legal');
+});

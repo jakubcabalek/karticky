@@ -81,3 +81,20 @@ test('merging decks keeps the newer version and drops deleted decks', () => {
   assert.deepEqual(plain(merged.decks).map(d => d.name), ['Elfové 2']);
   assert.equal(data.sameLibrary(merged, data.mergeLibraries(merged, merged)), true);
 });
+
+test('fresh prices replace saved ones everywhere; wishlist alerts fire at or below the target', () => {
+  const now = '2026-11-13T10:00:00.000Z';
+  let library = data.createDeck(data.emptyLibrary(), 'D', { id: 'd', now });
+  library = { ...library, wishlist: data.addCard([], card('a', 'Bolt', { eur: 3 }), { now }), collection: data.addCard([], card('b', 'Elves', { eur: 1 }), { now }) };
+  library = data.updateDeck(library, 'd', deck => ({ main: data.addCard(deck.main, card('a', 'Bolt', { eur: 3 }), { now }) }), now);
+  assert.deepEqual(plain(data.libraryCardIds(library)), ['b', 'a']);
+  library = { ...library, wishlist: data.setTargetPrice(library.wishlist, 'a:nonfoil', 2.5) };
+  assert.equal(data.priceAlerts(library.wishlist).length, 0);
+  const fresh = data.refreshCards(library, [card('a', 'Bolt', { eur: 2.4 })], now);
+  assert.equal(fresh.decks[0].main[0].card.prices.eur, 2.4);
+  assert.equal(fresh.wishlist[0].targetPrice, 2.5);
+  assert.deepEqual(plain(data.priceAlerts(fresh.wishlist)).map(a => a.price), [2.4]);
+  assert.equal(data.pricesAreStale(fresh, '2026-11-13T20:00:00.000Z'), false);
+  assert.equal(data.pricesAreStale(fresh, '2026-11-14T08:00:00.000Z'), true);
+  assert.equal(data.setTargetPrice(fresh.wishlist, 'a:nonfoil', null)[0].targetPrice, undefined);
+});
