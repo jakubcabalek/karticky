@@ -9,11 +9,11 @@ test('there are no feature switches while the app has one version', () => {
 });
 
 test('saved switches that no longer exist are ignored and broken storage never crashes', () => {
-  const values = new Map([['kartoteka-development-features-v1', '{"cardScanner":false}']]);
+  const values = new Map([['karticky-development-features-v1', '{"cardScanner":false}']]);
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
   const features = load('devFeatures.ts', { dependencies: { './appVersion': { isDevelopmentVersion: true } }, globals: { localStorage: storage } });
   assert.deepEqual(plain(features.readDevelopmentFeatures()), {});
-  values.set('kartoteka-development-features-v1', 'invalid json');
+  values.set('karticky-development-features-v1', 'invalid json');
   assert.deepEqual(plain(features.readDevelopmentFeatures()), {});
 });
 

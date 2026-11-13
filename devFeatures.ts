@@ -8,10 +8,10 @@ export const developmentFeatures: readonly { key: string; title: string; descrip
 export type DevelopmentFeature = string;
 export type DevelopmentFeatureSettings = Record<DevelopmentFeature, boolean>;
 
-const storageKey = 'kartoteka-development-features-v1';
+const storageKey = 'karticky-development-features-v1';
 const featureStorage = () => (globalThis as typeof globalThis & {
-  __KARTOTEKA_FEATURE_STORAGE__?: Pick<Storage, 'getItem' | 'setItem'>;
-}).__KARTOTEKA_FEATURE_STORAGE__ ?? globalThis.localStorage;
+  __KARTICKY_FEATURE_STORAGE__?: Pick<Storage, 'getItem' | 'setItem'>;
+}).__KARTICKY_FEATURE_STORAGE__ ?? globalThis.localStorage;
 const defaults = Object.fromEntries(developmentFeatures.map(({ key }) => [key, isDevelopmentVersion])) as DevelopmentFeatureSettings;
 
 export const readDevelopmentFeatures = (): DevelopmentFeatureSettings => {

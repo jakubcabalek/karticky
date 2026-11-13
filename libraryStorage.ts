@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isDevelopmentVersion } from './appVersion';
 import { emptyLibrary, normalizeLibrary, type Library } from './cardData';
 
-export const libraryStorageKey = isDevelopmentVersion ? 'kartoteka-dev-library-v1' : 'kartoteka-library-v1';
+export const libraryStorageKey = isDevelopmentVersion ? 'karticky-dev-library-v1' : 'karticky-library-v1';
 
 export const loadLibrary = async (): Promise<Library> => {
   try {

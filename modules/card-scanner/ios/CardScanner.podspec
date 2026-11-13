@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
   s.name           = 'CardScanner'
   s.version        = '1.0.0'
-  s.summary        = 'Scans Magic cards with the iPhone camera for Kartotéka.'
+  s.summary        = 'Scans Magic cards with the iPhone camera for Kartičky.'
   s.description    = 'Opens the system document camera (it finds the card edges and straightens it), then reads the text on each card with Vision in any language and returns small straightened pixels for artwork matching.'
   s.license        = 'MIT'
-  s.author         = 'Kartotéka'
-  s.homepage       = 'https://kartoteka.pages.dev'
+  s.author         = 'Kartičky'
+  s.homepage       = 'https://karticky.pages.dev'
   s.platforms      = {
     :ios => '16.4'
   }

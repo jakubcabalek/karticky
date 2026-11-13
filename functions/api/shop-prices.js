@@ -10,7 +10,7 @@
 
 const CACHE_SECONDS = 6 * 60 * 60;
 const TIMEOUT_MS = 6000;
-const USER_AGENT = 'Kartoteka/0.1 (MTG collection app; +https://kartoteka.pages.dev)';
+const USER_AGENT = 'Karticky/0.1 (MTG collection app; +https://karticky.pages.dev)';
 
 // Search addresses must be checked against each shop (verified: false = not yet checked).
 export const SHOPS = [

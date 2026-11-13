@@ -13,7 +13,7 @@ import {
 } from './lifeCounter';
 import { SmallButton, s } from './ui';
 
-const storageKey = 'kartoteka-life-game-v1';
+const storageKey = 'karticky-life-game-v1';
 
 const PANEL: Record<PlayerColor, { bg: string; fg: string; name: string }> = {
   blue: { bg: '#2F5DA8', fg: '#FFFFFF', name: 'Modrá' },

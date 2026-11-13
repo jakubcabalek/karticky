@@ -7,7 +7,7 @@ import sharp from 'sharp';
 import { decodeIndex, encodeIndex, hashRegion, HASH_WORDS, INDEX_RECT } from '../../cardHash.ts';
 
 const [output = 'scan-index-v1.bin', previousPath] = process.argv.slice(2);
-const headers = { 'User-Agent': 'Kartoteka/0.1 (+https://github.com/jakubcabalek/kartoteka)', Accept: 'application/json' };
+const headers = { 'User-Agent': 'Karticky/0.1 (+https://github.com/jakubcabalek/karticky)', Accept: 'application/json' };
 const CONCURRENCY = 12;
 
 const json = async url => {

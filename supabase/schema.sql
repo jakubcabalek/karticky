@@ -1,4 +1,4 @@
--- Kartotéka: each signed-in user owns exactly one private library (collection, wishlist, decks).
+-- Kartičky: each signed-in user owns exactly one private library (collection, wishlist, decks).
 -- Run once in the Supabase SQL editor. Same pattern as Fakturo's account_data.
 create table if not exists public.library_data (
   user_id uuid primary key references auth.users (id) on delete cascade,

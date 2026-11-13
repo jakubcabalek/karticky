@@ -35,7 +35,7 @@ test('on the phone Google opens in the browser and returns to the app', async ()
   const { cloud, calls } = loadCloud();
   await cloud.signInWithProvider('google');
   assert.equal(calls.oauth[0].provider, 'google');
-  assert.equal(calls.oauth[0].options.redirectTo, 'kartoteka://auth-callback');
+  assert.equal(calls.oauth[0].options.redirectTo, 'karticky://auth-callback');
   assert.equal(calls.oauth[0].options.skipBrowserRedirect, true);
   assert.equal(calls.opened.length, 1);
   await cloud.signInWithProvider('facebook');
@@ -44,9 +44,9 @@ test('on the phone Google opens in the browser and returns to the app', async ()
 
 test('the return link is exchanged for a session; errors and foreign links are handled', async () => {
   const { cloud, calls } = loadCloud();
-  assert.equal(await cloud.completeSignInFromUrl('kartoteka://auth-callback?code=abc'), null);
+  assert.equal(await cloud.completeSignInFromUrl('karticky://auth-callback?code=abc'), null);
   assert.deepEqual(calls.exchanged, ['abc']);
-  assert.equal(await cloud.completeSignInFromUrl('kartoteka://auth-callback?error=access_denied&error_description=User+cancelled'), 'User cancelled');
+  assert.equal(await cloud.completeSignInFromUrl('karticky://auth-callback?error=access_denied&error_description=User+cancelled'), 'User cancelled');
   assert.equal(await cloud.completeSignInFromUrl('https://evil.example/?code=abc'), null);
   assert.equal(calls.exchanged.length, 1);
 });

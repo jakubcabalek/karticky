@@ -5,26 +5,26 @@ import { File, Paths } from 'expo-file-system';
 
 type SimpleStorage = Pick<Storage, 'getItem' | 'setItem'>;
 type RuntimeGlobal = {
-  __KARTOTEKA_APP_CHANNEL__?: 'development' | 'production';
-  __KARTOTEKA_FEATURE_STORAGE__?: SimpleStorage;
+  __KARTICKY_APP_CHANNEL__?: 'development' | 'production';
+  __KARTICKY_FEATURE_STORAGE__?: SimpleStorage;
 };
 
 const runtime = globalThis as unknown as RuntimeGlobal;
-const channelFile = () => new File(Paths.document, 'kartoteka-app-channel.txt');
+const channelFile = () => new File(Paths.document, 'karticky-app-channel.txt');
 
 try {
   const file = channelFile();
   if (file.exists) {
     const channel = file.textSync().trim();
-    if (channel === 'development' || channel === 'production') runtime.__KARTOTEKA_APP_CHANNEL__ = channel;
+    if (channel === 'development' || channel === 'production') runtime.__KARTICKY_APP_CHANNEL__ = channel;
   }
 } catch {
   // Without a readable choice the build's own channel applies.
 }
 
 // Cloud configuration reads these switches synchronously during startup.
-const fileFor = (key: string) => new File(Paths.document, `kartoteka-setting-${encodeURIComponent(key)}.txt`);
-runtime.__KARTOTEKA_FEATURE_STORAGE__ = {
+const fileFor = (key: string) => new File(Paths.document, `karticky-setting-${encodeURIComponent(key)}.txt`);
+runtime.__KARTICKY_FEATURE_STORAGE__ = {
   getItem: key => {
     const file = fileFor(key);
     return file.exists ? file.textSync() : null;

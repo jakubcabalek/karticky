@@ -12,7 +12,7 @@ permissions:
   deployments: write
 
 concurrency:
-  group: kartoteka-web-${{ github.ref }}
+  group: karticky-web-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -44,5 +44,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web-build --project-name=kartoteka --branch=${{ github.ref_name }}
+          command: pages deploy web-build --project-name=karticky --branch=${{ github.ref_name }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

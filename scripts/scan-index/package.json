@@ -1,5 +1,5 @@
 {
-  "name": "kartoteka-scan-index",
+  "name": "karticky-scan-index",
   "private": true,
   "type": "module",
   "description": "Builds the artwork index used to recognise scanned cards. Runs in GitHub Actions, not in the app.",

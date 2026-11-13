@@ -57,20 +57,20 @@ Docs: https://docs.expo.dev/eas/index.md
 - Show "Data o kartách: Scryfall" where card data is shown. Card images are Wizards of the Coast's; do not alter or crop away the artist/copyright line.
 - Prices from Czech e-shops (Najada, Černý rytíř, Blacklotus …) must go through a function in `functions/api/`, cached, with a polite rate. Check each shop's terms before scraping; prefer a feed or API when one exists.
 
-## Kartotéka release tracking
+## Kartičky release tracking
 
-- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI) and is deployed to kartoteka.pages.dev. No feature switches, no separate test release. `dev` is kept equal to `main`.
-- When the owner starts sharing the app, switch to the Fakturo way: new features to `dev` (dev.kartoteka.pages.dev) behind switches in `devFeatures.ts`, released to `main` only when the owner says so. Until then `developmentFeatures` stays empty.
-- After every deploy (web or an iPhone build), update the owner's status page "Kartotéka – kde co běží" (claude.ai artifact 8gEqQT18Jz9rGXyZRV3Yyr): what changed, where it is now, and the date.
+- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI) and is deployed to karticky.pages.dev. No feature switches, no separate test release. `dev` is kept equal to `main`.
+- When the owner starts sharing the app, switch to the Fakturo way: new features to `dev` (dev.karticky.pages.dev) behind switches in `devFeatures.ts`, released to `main` only when the owner says so. Until then `developmentFeatures` stays empty.
+- After every deploy (web or an iPhone build), update the owner's status page "Kartičky – kde co běží" (claude.ai artifact 8gEqQT18Jz9rGXyZRV3Yyr): what changed, where it is now, and the date.
 
 ## Two agents on one repository (Claude and Codex)
 
-Claude (in the cloud) and Codex (on the owner's Mac) both work on Kartotéka. GitHub is the only source of truth; nobody's local copy is.
+Claude (in the cloud) and Codex (on the owner's Mac) both work on Kartičky. GitHub is the only source of truth; nobody's local copy is.
 
 - **Start from fresh `origin/main`** (while there is one version, see above). Before any change or review run `git fetch origin` and branch from it: `claude/<topic>` or `codex/<topic>`. Never build changes on an old checkout.
 - **Name the commit.** A review or a test report starts with the commit hash it was done on (`git rev-parse --short HEAD`), and checks first that it is the current `origin/main`.
-- **Everything goes through a pull request into `main`** (later `dev`), with CI green before merging. Leave no uncommitted changes in `~/kartoteka`: the other agent cannot see them and they block the owner's `git pull`. If you cannot push, commit to a local branch and tell the owner its name.
+- **Everything goes through a pull request into `main`** (later `dev`), with CI green before merging. Leave no uncommitted changes in `~/karticky`: the other agent cannot see them and they block the owner's `git pull`. If you cannot push, commit to a local branch and tell the owner its name.
 - Never push to `main` directly; always a pull request.
 - **One agent per area at a time.** Before starting, check open pull requests (`gh pr list`); if the other agent has one touching the same files, wait or build on top of it.
 - **The PR description says what changed for the user**, in Czech. Claude keeps the status page up to date from it; Codex does not need to.
-- **`~/kartoteka` on the Mac is for builds.** It stays on `main`, clean, and is refreshed before every build with `git checkout -- package.json package-lock.json && git pull`.
+- **`~/karticky` on the Mac is for builds.** It stays on `main`, clean, and is refreshed before every build with `git checkout -- package.json package-lock.json && git pull`.

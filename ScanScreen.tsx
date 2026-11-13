@@ -18,7 +18,7 @@ export const LANGUAGE_NAMES: Record<string, string> = {
   de: 'Němčina', fr: 'Francouzština', it: 'Italština', es: 'Španělština', pt: 'Portugalština', ru: 'Ruština', ph: 'Phyrexijština',
 };
 const USUAL_LANGUAGES = ['en', 'ja', 'zhs', 'zht', 'ko', 'de', 'ru'];
-const languageKey = 'kartoteka-scan-language';
+const languageKey = 'karticky-scan-language';
 const CARD_WIDTH = 244;
 const CARD_HEIGHT = 340;
 

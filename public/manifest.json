@@ -1,6 +1,6 @@
 {
-  "name": "Kartotéka",
-  "short_name": "Kartotéka",
+  "name": "Kartičky",
+  "short_name": "Kartičky",
   "description": "Sbírka, balíčky a wishlist karet Magic: The Gathering.",
   "start_url": "/",
   "scope": "/",

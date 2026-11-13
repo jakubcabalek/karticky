@@ -5,8 +5,8 @@ const { load } = require('./load.cjs');
 test('production stays the default and version destinations are fixed HTTPS addresses', () => {
   const version = load('appVersion.ts');
   assert.equal(version.isDevelopmentVersion, false);
-  assert.equal(version.versionUrl(true), 'https://dev.kartoteka.pages.dev/');
-  assert.equal(version.versionUrl(false), 'https://kartoteka.pages.dev/');
+  assert.equal(version.versionUrl(true), 'https://dev.karticky.pages.dev/');
+  assert.equal(version.versionUrl(false), 'https://karticky.pages.dev/');
   assert.equal(load('appVersion.ts', { env: { EXPO_PUBLIC_APP_CHANNEL: 'unexpected' } }).isDevelopmentVersion, false);
 });
 

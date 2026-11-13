@@ -16,7 +16,7 @@ const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? 
 export const cloudConfigured = Boolean(supabaseUrl && supabaseKey);
 
 /** Where Google/Facebook send the person back after signing in. Must be allowed in Supabase → Auth → URL configuration. */
-export const NATIVE_REDIRECT = 'kartoteka://auth-callback';
+export const NATIVE_REDIRECT = 'karticky://auth-callback';
 
 export const supabase: SupabaseClient | null = cloudConfigured
   ? createClient(supabaseUrl, supabaseKey, {
@@ -47,7 +47,7 @@ const client = () => {
 
 /**
  * Google or Facebook. On the web the page goes to the provider and comes back signed in.
- * On the phone the provider opens in Safari and returns to the app via kartoteka://auth-callback.
+ * On the phone the provider opens in Safari and returns to the app via karticky://auth-callback.
  */
 export const signInWithProvider = async (provider: OAuthProvider) => {
   const auth = client().auth;
@@ -64,7 +64,7 @@ export const signInWithProvider = async (provider: OAuthProvider) => {
   if (Platform.OS !== 'web' && data.url) await Linking.openURL(data.url);
 };
 
-/** Finishes a Google/Facebook sign-in when the phone app is opened via kartoteka://auth-callback?code=… */
+/** Finishes a Google/Facebook sign-in when the phone app is opened via karticky://auth-callback?code=… */
 export const completeSignInFromUrl = async (url: string | null): Promise<string | null> => {
   if (!url || !url.startsWith(NATIVE_REDIRECT) || !supabase) return null;
   const params = new URL(url).searchParams;
@@ -94,7 +94,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
   const { data, error } = await client().auth.signUp({
     email: email.trim(),
     password,
-    options: { emailRedirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://kartoteka.pages.dev/' },
+    options: { emailRedirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://karticky.pages.dev/' },
   });
   if (error) throw error;
   return !data.session;
@@ -102,7 +102,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
 
 export const resetPassword = async (email: string) => {
   const { error } = await client().auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://kartoteka.pages.dev/',
+    redirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://karticky.pages.dev/',
   });
   if (error) throw error;
 };
