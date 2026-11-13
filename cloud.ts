@@ -94,7 +94,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
   const { data, error } = await client().auth.signUp({
     email: email.trim(),
     password,
-    options: { emailRedirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://karticky.pages.dev/' },
+    options: { emailRedirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://karticky-9w4.pages.dev/' },
   });
   if (error) throw error;
   return !data.session;
@@ -102,7 +102,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
 
 export const resetPassword = async (email: string) => {
   const { error } = await client().auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://karticky.pages.dev/',
+    redirectTo: Platform.OS === 'web' ? `${window.location.origin}/` : 'https://karticky-9w4.pages.dev/',
   });
   if (error) throw error;
 };

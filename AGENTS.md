@@ -61,8 +61,8 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Kartičky release tracking
 
-- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI) and is deployed to karticky.pages.dev. No feature switches, no separate test release. `dev` is kept equal to `main`.
-- When the owner starts sharing the app, switch to the Fakturo way: new features to `dev` (dev.karticky.pages.dev) behind switches in `devFeatures.ts`, released to `main` only when the owner says so. Until then `developmentFeatures` stays empty.
+- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI) and is deployed to karticky-9w4.pages.dev. No feature switches, no separate test release. `dev` is kept equal to `main`.
+- When the owner starts sharing the app, switch to the Fakturo way: new features to `dev` (dev.karticky-9w4.pages.dev) behind switches in `devFeatures.ts`, released to `main` only when the owner says so. Until then `developmentFeatures` stays empty.
 - After every deploy (web or an iPhone build), update the owner's status page "Kartičky – kde co běží" (claude.ai artifact 8gEqQT18Jz9rGXyZRV3Yyr): what changed, where it is now, and the date.
 
 ## Two agents on one repository (Claude and Codex)

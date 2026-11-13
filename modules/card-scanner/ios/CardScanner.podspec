@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.description    = 'Opens the system document camera (it finds the card edges and straightens it), then reads the text on each card with Vision in any language and returns small straightened pixels for artwork matching.'
   s.license        = 'MIT'
   s.author         = 'Kartičky'
-  s.homepage       = 'https://karticky.pages.dev'
+  s.homepage       = 'https://karticky-9w4.pages.dev'
   s.platforms      = {
     :ios => '16.4'
   }
