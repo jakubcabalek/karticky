@@ -34,7 +34,8 @@ export default function LifeScreen() {
   const [setup, setSetup] = useState(false);
   const [sheetFor, setSheetFor] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [, setTick] = useState(0);
+  // The clock for the "−3" bubbles; it moves on with every tap and once more when the bubble should go.
+  const [now, setNow] = useState(() => Date.now());
   const tickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -51,8 +52,9 @@ export default function LifeScreen() {
   // The "−3" bubble disappears on its own a moment after the last tap.
   const play = (change: (current: Game) => Game) => {
     setGame(current => current ? change(current) : current);
+    setNow(Date.now());
     if (tickTimer.current) clearTimeout(tickTimer.current);
-    tickTimer.current = setTimeout(() => setTick(n => n + 1), 1600);
+    tickTimer.current = setTimeout(() => setNow(Date.now()), 1600);
   };
 
   if (!loaded) return null;
@@ -62,16 +64,14 @@ export default function LifeScreen() {
 
   const won = winner(game);
   const rows = rowsFor(game.players.length);
-  let next = 0;
-  const now = Date.now();
+  const rowStarts = rows.map((_, i) => rows.slice(0, i).reduce((sum, size) => sum + size, 0));
   const sheetPlayer = game.players.find(player => player.id === sheetFor);
 
   return (
     <View style={life.screen}>
       <View style={life.table}>
         {rows.map((size, rowIndex) => {
-          const players = game.players.slice(next, next + size);
-          next += size;
+          const players = game.players.slice(rowStarts[rowIndex], rowStarts[rowIndex] + size);
           const upsideDown = rows.length > 1 && rowIndex < Math.floor(rows.length / 2);
           return (
             <View key={rowIndex} style={life.row}>

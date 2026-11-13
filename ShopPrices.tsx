@@ -19,7 +19,7 @@ export const fetchShopPrices = async (name: string): Promise<ShopResult[]> => {
 };
 
 export default function ShopPrices({ card, autoLoad = false }: { card: CardPrinting; autoLoad?: boolean }) {
-  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>(autoLoad ? 'loading' : 'idle');
   const [shops, setShops] = useState<ShopResult[]>([]);
 
   const load = async () => {
@@ -32,10 +32,14 @@ export default function ShopPrices({ card, autoLoad = false }: { card: CardPrint
     }
   };
 
+  // "Jen se podívat" while scanning: ask the shops straight away, once per card.
   useEffect(() => {
-    if (autoLoad) void load();
-    // Load once per card; `load` changes on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!autoLoad) return;
+    let cancelled = false;
+    fetchShopPrices(card.name)
+      .then(result => { if (!cancelled) { setShops(result); setState('done'); } })
+      .catch(() => { if (!cancelled) setState('error'); });
+    return () => { cancelled = true; };
   }, [autoLoad, card.name]);
 
   if (state === 'idle') return <SmallButton label="Ceny v obchodech" onPress={() => void load()} />;
