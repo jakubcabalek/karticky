@@ -1,0 +1,9 @@
+{
+  "name": "kartoteka-scan-index",
+  "private": true,
+  "type": "module",
+  "description": "Builds the artwork index used to recognise scanned cards. Runs in GitHub Actions, not in the app.",
+  "dependencies": {
+    "sharp": "^0.34.0"
+  }
+}

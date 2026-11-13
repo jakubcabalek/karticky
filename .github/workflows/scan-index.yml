@@ -1,0 +1,34 @@
+name: Scan index
+
+# Rebuilds the artwork index for card scanning once a week (new sets) and on demand.
+# The index is a release asset "scan-index"; the web build copies it into the site
+# and the iPhone app downloads it from there.
+on:
+  schedule:
+    - cron: '17 3 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kartoteka-scan-index
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --prefix scripts/scan-index
+      - run: gh release download scan-index -p scan-index-v1.bin -D previous || echo "No previous index"
+      - run: node scripts/scan-index/build.mjs scan-index-v1.bin previous/scan-index-v1.bin
+      - run: |
+          gh release view scan-index >/dev/null 2>&1 || gh release create scan-index --title "Index karet pro skenování" --notes "Vytváří workflow Scan index. Neměnit ručně." --latest=false
+          gh release upload scan-index scan-index-v1.bin --clobber

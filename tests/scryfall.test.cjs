@@ -41,3 +41,21 @@ test('the collector line at the bottom of a card gives set, number and language'
   assert.deepEqual(plain(scryfall.parseCollectorLine('045/274 U\nwoe · de')), { set: 'woe', number: '45', lang: 'de' });
   assert.equal(scryfall.parseCollectorLine('Lightning Bolt\nInstant'), null);
 });
+
+test('Japanese, Chinese and Korean cards print their language as JP, CS/CT and KO', () => {
+  assert.deepEqual(plain(scryfall.parseCollectorLine('0281 M\nWAR • JP')), { set: 'war', number: '281', lang: 'ja' });
+  assert.equal(scryfall.parseCollectorLine('012 C\nNEO • CS').lang, 'zhs');
+  assert.equal(scryfall.parseCollectorLine('012 C\nNEO • CT').lang, 'zht');
+  assert.equal(scryfall.parseCollectorLine('012 C\nNEO • KO').lang, 'ko');
+});
+
+test('all printings follow every result page and ask for every language', async () => {
+  const asked = [];
+  const pages = [
+    { data: [{ id: 'a', name: 'X', lang: 'en' }], has_more: true, next_page: 'https://api.scryfall.com/next' },
+    { data: [{ id: 'b', name: 'X', lang: 'ja', illustration_id: 'ill' }], has_more: false },
+  ];
+  const printings = await scryfall.allPrintings('oracle-1', async url => { asked.push(url); return response(200, pages[asked.length - 1]); });
+  assert.match(decodeURIComponent(asked[0]), /oracleid:oracle-1 lang:any/);
+  assert.deepEqual(plain(printings).map(p => [p.id, p.lang, p.illustrationId ?? null]), [['a', 'en', null], ['b', 'ja', 'ill']]);
+});

@@ -46,3 +46,9 @@ yarn-error.*
 *.ipa
 *.dSYM.zip
 
+
+# Artwork index for scanning (built by the Scan index workflow)
+public/scan-index-v1.bin
+scan-index-v1.bin
+previous/
+scripts/scan-index/node_modules/

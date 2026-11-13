@@ -31,6 +31,10 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
+      # The artwork index for scanning comes from the "Scan index" workflow.
+      - run: gh release download scan-index -p scan-index-v1.bin -D public || echo "Index karet zatím není, skenování podle obrázku nepůjde."
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: npm run web:build
       - name: Deploy to Cloudflare Pages
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request' && vars.CLOUD_DEPLOY_READY == 'true'

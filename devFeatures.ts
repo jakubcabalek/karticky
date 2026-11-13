@@ -3,6 +3,8 @@ import { isDevelopmentVersion } from './appVersion';
 // Every new feature starts here: on in the test version, off in production until
 // the owner releases it. A released feature loses its switch and the code path without it.
 export const developmentFeatures = [
+  { key: 'cardScanner', title: 'Skenování karet', description: 'Nová záložka Skenovat. V iPhonu systémový fotoaparát najde okraje karty a umí vyfotit celou hromádku za sebou, na webu kamera s rámečkem nebo nahraná fotka. Karta se pozná podle ilustrace (funguje i pro japonské, čínské a korejské karty), jazyk a edice podle drobného textu vlevo dole nebo písma na kartě.' },
+  { key: 'shopPrices', title: 'Ceny v českých obchodech', description: 'U karty v Hledat přibude „Ceny v obchodech“: co mají skladem Najada, Černý rytíř, Blacklotus a další, s cenou v Kč a odkazem do obchodu.' },
   { key: 'cardPrices', title: 'Ceny karet', description: 'U karty v hledání a ve sbírce je cena z Cardmarketu (EUR) a TCGplayeru (USD) podle Scryfallu, ve sbírce a balíčku celková hodnota. Ceny se mění jednou denně.' },
 ] as const;
 

@@ -7,6 +7,8 @@ export type CardPrices = { eur?: number; eurFoil?: number; usd?: number; usdFoil
 export type CardPrinting = {
   id: string;
   oracleId?: string;
+  /** Same artwork in every language and reprint with the same art. */
+  illustrationId?: string;
   name: string;
   printedName?: string;
   set: string;

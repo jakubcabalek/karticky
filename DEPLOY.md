@@ -14,6 +14,16 @@ Data jsou zatím uložená jen v zařízení (AsyncStorage, na webu v prohlíže
    - Variable: `CLOUD_DEPLOY_READY=true`, až je vše nastavené. Do té doby se změny jen kontrolují a sestavují.
 5. V `Settings → Branches` nastavit `dev` jako výchozí větev a ochránit `main` (jen přes PR).
 
+## Skenování karet
+
+- Index ilustrací (`scan-index-v1.bin`, asi 5 MB) staví workflow **Scan index** (Actions → Scan index → Run workflow, poprvé trvá i 1–2 hodiny, pak jednou týdně jen nové karty). Výsledek je v release `scan-index`. Workflow webu ho při každém sestavení zkopíruje do webu, iPhone si ho stáhne z webu.
+- Bez indexu skenování pozná jen karty s čitelným číslem a edicí vlevo dole.
+- iPhone: skener je vlastní nativní modul (`modules/card-scanner`), takže potřebuje nový build přes EAS. Expo Go ho nemá.
+
+## Ceny z obchodů
+
+Funkce `functions/api/shop-prices.js` běží na Cloudflare Pages vedle webu. Adresy vyhledávání obchodů jsou označené `verified: false`, dokud je někdo neověří na skutečném webu obchodu (a nepřečte jejich podmínky). Při `npx expo start` funkce neběží; vyzkoušet jde na dev.kartoteka.pages.dev nebo přes `npx wrangler pages dev web-build`.
+
 ## Každá změna
 
 1. Větev z čerstvého `origin/dev`: `claude/<téma>` nebo `codex/<téma>`.

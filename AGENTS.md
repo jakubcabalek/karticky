@@ -45,6 +45,7 @@ Docs: https://docs.expo.dev/eas/index.md
 - `index.ts` → `App.tsx` (screens). Pure logic lives in root modules with no React and no storage (`cardData.ts`, `scryfall.ts`), so `node --test` can test it through `tests/load.cjs`. Every new piece of logic gets a test there.
 - `appVersion.ts` decides test vs. public version (baked in at build time, `EXPO_PUBLIC_APP_CHANNEL`). The test version keeps its data under a separate storage key.
 - `devFeatures.ts` holds the switches; the Profile screen in the test version lists them.
+- Scanning: `cardHash.ts` (artwork hash + index format, shared with `scripts/scan-index/build.mjs`), `scanIdentify.ts` (collector line → artwork → language), `ScanScreen.tsx` (UI, web camera), `modules/card-scanner` (iPhone: VisionKit document camera + Vision OCR in all languages). The index `scan-index-v1.bin` is built weekly by the "Scan index" workflow into the release `scan-index`; the web build copies it into the site. Changing the hash means bumping the file name (v2) and rebuilding without the previous index.
 - `functions/api/` is for Cloudflare Pages Functions (server code for things the browser cannot call directly, e.g. Czech e-shops without CORS).
 
 ## Card data (Scryfall)

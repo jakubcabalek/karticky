@@ -15,7 +15,8 @@
       "bundleIdentifier": "com.jakubcabalek.kartoteka",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Fotoaparát slouží ke skenování karet do sbírky."
       }
     },
     "android": {

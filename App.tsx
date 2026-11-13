@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator, DevSettings, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
+import { ActivityIndicator, DevSettings, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { appRevision, isDevelopmentVersion, versionUrl } from './appVersion';
@@ -9,14 +7,18 @@ import { developmentFeatures, readDevelopmentFeatures, saveDevelopmentFeatures }
 import { saveNativeAppChannel } from './nativeRuntime';
 import { loadLibrary, saveLibrary } from './libraryStorage';
 import { searchCards } from './scryfall';
+import ScanScreen from './ScanScreen';
+import ShopPrices from './ShopPrices';
+import { CardRow, EntryCard, SmallButton, SwitchRow, s } from './ui';
 import {
-  addCard, copiesOf, createDeck, deleteDeck, emptyLibrary, entryPrice, formatPrice, listValue, markWishAcquired,
+  addCard, copiesOf, createDeck, deleteDeck, emptyLibrary, formatPrice, listValue, markWishAcquired,
   missingForDeck, setQuantity, totalCards, updateDeck, wishMissingCards,
   type CardEntry, type CardPrinting, type DeckBoard, type Library,
 } from './cardData';
 
-type Tab = 'search' | 'collection' | 'decks' | 'wishlist' | 'profile';
-const tabs: { key: Tab; label: string }[] = [
+type Tab = 'scan' | 'search' | 'collection' | 'decks' | 'wishlist' | 'profile';
+const allTabs: { key: Tab; label: string }[] = [
+  { key: 'scan', label: 'Skenovat' },
   { key: 'search', label: 'Hledat' },
   { key: 'collection', label: 'Sbírka' },
   { key: 'decks', label: 'Balíčky' },
@@ -37,6 +39,7 @@ export default function App() {
   const [openDeckId, setOpenDeckId] = useState<string | null>(null);
   const [deckPickerCard, setDeckPickerCard] = useState<CardPrinting | null>(null);
   const showPrices = features.cardPrices;
+  const tabs = allTabs.filter(item => item.key !== 'scan' || features.cardScanner);
 
   useEffect(() => {
     void loadLibrary().then(saved => { setLibrary(saved); setLoaded(true); });
@@ -66,10 +69,19 @@ export default function App() {
       <View style={s.content}>
         {!loaded ? <ActivityIndicator style={s.loading} /> : (
           <>
+            {tab === 'scan' && features.cardScanner && (
+              <ScanScreen
+                onAdd={(card, where, finish) => change(lib => where === 'collection'
+                  ? { ...lib, collection: addCard(lib.collection, card, { finish, now: nowIso() }) }
+                  : { ...lib, wishlist: addCard(lib.wishlist, card, { finish, now: nowIso() }) })}
+                onAddToDeck={setDeckPickerCard}
+              />
+            )}
             {tab === 'search' && (
               <SearchScreen
                 library={library}
                 showPrices={showPrices}
+                showShopPrices={features.shopPrices}
                 onAdd={(card, where) => change(lib => where === 'collection'
                   ? { ...lib, collection: addCard(lib.collection, card, { now: nowIso() }) }
                   : { ...lib, wishlist: addCard(lib.wishlist, card, { now: nowIso() }) })}
@@ -148,9 +160,10 @@ export default function App() {
   );
 }
 
-function SearchScreen({ library, showPrices, onAdd, onAddToDeck }: {
+function SearchScreen({ library, showPrices, showShopPrices, onAdd, onAddToDeck }: {
   library: Library;
   showPrices: boolean;
+  showShopPrices: boolean;
   onAdd: (card: CardPrinting, where: 'collection' | 'wishlist') => void;
   onAddToDeck: (card: CardPrinting) => void;
 }) {
@@ -198,6 +211,7 @@ function SearchScreen({ library, showPrices, onAdd, onAddToDeck }: {
             <SmallButton label="+ Wishlist" onPress={() => onAdd(card, 'wishlist')} />
             <SmallButton label="+ Balíček" onPress={() => onAddToDeck(card)} />
           </View>
+          {showShopPrices && <ShopPrices card={card} />}
         </View>
       ))}
       {state === 'done' && <Text style={s.footnote}>Data o kartách: Scryfall.</Text>}
@@ -331,106 +345,3 @@ function ProfileScreen({ library, features, onFeatures, onSwitchVersion }: {
     </ScrollView>
   );
 }
-
-function CardRow({ card, subtitle, price }: { card: CardPrinting; subtitle: string; price?: number | null }) {
-  return (
-    <View style={s.row}>
-      {card.imageSmall ? <Image source={{ uri: card.imageSmall }} style={s.thumb} accessibilityIgnoresInvertColors /> : <View style={[s.thumb, s.thumbEmpty]} />}
-      <View style={s.grow}>
-        <Text style={s.rowTitle}>{card.printedName ?? card.name}</Text>
-        <Text style={s.muted}>{subtitle}</Text>
-        <Text style={s.muted}>{card.typeLine}</Text>
-        {price !== undefined && <Text style={s.price}>{price === null ? 'Bez ceny' : formatPrice(price, 'eur')}</Text>}
-      </View>
-    </View>
-  );
-}
-
-function EntryCard({ entry, showPrices, onQuantity, action }: {
-  entry: CardEntry;
-  showPrices: boolean;
-  onQuantity: (quantity: number) => void;
-  action?: { label: string; onPress: () => void };
-}) {
-  const subtitle = `${entry.card.setName} · #${entry.card.collectorNumber}${entry.finish === 'foil' ? ' · foil' : ''}`;
-  return (
-    <View style={s.card}>
-      <CardRow card={entry.card} subtitle={subtitle} price={showPrices ? entryPrice(entry, 'eur') : undefined} />
-      <View style={s.actions}>
-        <SmallButton label="−" onPress={() => onQuantity(entry.quantity - 1)} />
-        <Text style={s.quantity}>{entry.quantity}×</Text>
-        <SmallButton label="+" onPress={() => onQuantity(entry.quantity + 1)} />
-        {action && <SmallButton label={action.label} onPress={action.onPress} />}
-      </View>
-    </View>
-  );
-}
-
-function SwitchRow({ title, description, value, onChange }: { title: string; description: string; value: boolean; onChange: () => void }) {
-  return (
-    <Pressable style={s.switchRow} accessibilityRole="switch" accessibilityState={{ checked: value }} onPress={onChange}>
-      <View style={s.grow}>
-        <Text style={s.rowTitle}>{title}</Text>
-        <Text style={s.muted}>{description}</Text>
-      </View>
-      <View style={[s.switch, value && s.switchOn]}><View style={[s.switchThumb, value && s.switchThumbOn]} /></View>
-    </Pressable>
-  );
-}
-
-function SmallButton({ label, onPress, danger }: { label: string; onPress: () => void; danger?: boolean }) {
-  return (
-    <Pressable accessibilityRole="button" style={[s.smallButton, danger && s.dangerButton]} onPress={onPress}>
-      <Text style={[s.smallButtonText, danger && s.dangerText]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-const color = { bg: '#F6F4FA', card: '#FFFFFF', fg: '#1C1530', muted: '#625A73', line: '#E4DFEE', accent: '#5B3FA8', accentSoft: '#ECE6F8', dev: '#8A5A00', devSoft: '#FFF3DC', danger: '#B3261E' };
-
-const s = StyleSheet.create({
-  app: { flex: 1, backgroundColor: color.bg },
-  content: { flex: 1 },
-  loading: { marginTop: 24 },
-  devBand: { backgroundColor: color.devSoft, paddingVertical: 4, alignItems: 'center' },
-  devBandText: { color: color.dev, fontSize: 12, fontWeight: '700' },
-  screen: { padding: 16, gap: 12, maxWidth: 720, width: '100%', alignSelf: 'center' },
-  title: { fontSize: 28, fontWeight: '800', color: color.fg },
-  input: { backgroundColor: color.card, borderColor: color.line, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: color.fg },
-  primaryButton: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
-  primaryButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  card: { backgroundColor: color.card, borderColor: color.line, borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 },
-  row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  grow: { flex: 1, minWidth: 0 },
-  thumb: { width: 61, height: 85, borderRadius: 4 },
-  thumbEmpty: { backgroundColor: color.accentSoft },
-  rowTitle: { fontSize: 16, fontWeight: '700', color: color.fg },
-  muted: { color: color.muted, fontSize: 14 },
-  price: { color: color.accent, fontWeight: '700', marginTop: 2 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  quantity: { minWidth: 32, textAlign: 'center', fontWeight: '700', color: color.fg },
-  smallButton: { backgroundColor: color.accentSoft, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignSelf: 'flex-start' },
-  smallButtonText: { color: color.accent, fontWeight: '700' },
-  dangerButton: { backgroundColor: '#FBE9E7' },
-  dangerText: { color: color.danger },
-  error: { color: color.danger },
-  empty: { color: color.muted, fontSize: 15, paddingVertical: 24, textAlign: 'center' },
-  footnote: { color: color.muted, fontSize: 12 },
-  link: { color: color.accent, fontWeight: '700', fontSize: 15 },
-  notice: { backgroundColor: color.devSoft, borderRadius: 14, padding: 12, gap: 6 },
-  section: { gap: 8, marginTop: 8 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', color: color.accent },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: color.card, borderRadius: 14, borderWidth: 1, borderColor: color.line, padding: 12 },
-  switch: { width: 46, height: 28, borderRadius: 14, backgroundColor: color.line, padding: 3 },
-  switchOn: { backgroundColor: color.accent },
-  switchThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' },
-  switchThumbOn: { transform: [{ translateX: 18 }] },
-  tabBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: color.line, backgroundColor: color.card, paddingTop: 8 },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  tabText: { color: color.muted, fontWeight: '600', fontSize: 13 },
-  tabTextActive: { color: color.accent, fontWeight: '800' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(20,12,40,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, gap: 8, maxWidth: 720, width: '100%', alignSelf: 'center' },
-  sheetTitle: { fontSize: 18, fontWeight: '800', color: color.fg },
-  sheetRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: color.line },
-});
