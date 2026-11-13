@@ -1,18 +1,20 @@
 # Kartotéka: nasazení a postup vývoje
 
-Stejný postup jako u Fakturo. Web se sestavuje jako statická aplikace Expo do složky `web-build` a běží na Cloudflare Pages: `main` → `kartoteka.pages.dev` (veřejná verze), `dev` → `dev.kartoteka.pages.dev` (testovací verze). iPhone aplikace se staví přes EAS.
+Web se sestavuje jako statická aplikace Expo do složky `web-build` a běží na Cloudflare Pages: `main` → `kartoteka.pages.dev`. iPhone aplikace se staví přes EAS.
 
-Data jsou zatím uložená jen v zařízení (AsyncStorage, na webu v prohlížeči). Testovací verze má vlastní oddělená data. Cloud (Supabase s Row Level Security jako ve Fakturo) přijde jako funkce pod přepínačem.
+**Zatím je jen jedna verze.** Aplikaci ještě nikdo jiný nepoužívá, takže všechno jde rovnou do `main`, bez přepínačů funkcí a bez testovací verze. Až ji začneš sdílet, přejdeme na postup z Fakturo (`dev` na dev.kartoteka.pages.dev, přepínače, vydání do `main` na tvůj pokyn).
+
+Data jsou zatím uložená jen v zařízení (AsyncStorage, na webu v prohlížeči). Cloud (Supabase s Row Level Security jako ve Fakturo) přijde později.
 
 ## Jednorázové nastavení
 
-1. Na Macu: `git clone` repozitáře do `~/kartoteka`, pak `npx expo install --fix` a `npm install`. Vznikne `package-lock.json`, ten commitni (přes PR do `dev`). Do té doby CI instaluje bez něj.
+1. Na Macu: `git clone` repozitáře do `~/kartoteka`, pak `npx expo install --fix` a `npm install`. Vznikne `package-lock.json`, ten commitni (přes PR do `main`). Do té doby CI instaluje bez něj.
 2. `npx expo-doctor` musí projít. Pak `npx eas-cli@latest init`: propojí projekt s Expo účtem `jcabalek` a doplní `extra.eas.projectId` do `app.json`.
-3. V Cloudflare vytvořit Pages projekt `kartoteka` (Direct Upload) a povolit preview deploymenty větve `dev`, aby vznikl alias `dev.kartoteka.pages.dev`.
+3. V Cloudflare vytvořit Pages projekt `kartoteka` (Direct Upload).
 4. V GitHubu (`Settings → Secrets and variables → Actions`):
    - Secrets: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (oprávnění `Cloudflare Pages → Edit`).
    - Variable: `CLOUD_DEPLOY_READY=true`, až je vše nastavené. Do té doby se změny jen kontrolují a sestavují.
-5. V `Settings → Branches` nastavit `dev` jako výchozí větev a ochránit `main` (jen přes PR).
+5. V `Settings → Branches` ochránit `main` (jen přes PR).
 
 ## Skenování karet
 
@@ -22,20 +24,18 @@ Data jsou zatím uložená jen v zařízení (AsyncStorage, na webu v prohlíže
 
 ## Ceny z obchodů
 
-Funkce `functions/api/shop-prices.js` běží na Cloudflare Pages vedle webu. Adresy vyhledávání obchodů jsou označené `verified: false`, dokud je někdo neověří na skutečném webu obchodu (a nepřečte jejich podmínky). Při `npx expo start` funkce neběží; vyzkoušet jde na dev.kartoteka.pages.dev nebo přes `npx wrangler pages dev web-build`.
+Funkce `functions/api/shop-prices.js` běží na Cloudflare Pages vedle webu. Adresy vyhledávání obchodů jsou označené `verified: false`, dokud je někdo neověří na skutečném webu obchodu (a nepřečte jejich podmínky). Při `npx expo start` funkce neběží; vyzkoušet jde na kartoteka.pages.dev nebo přes `npx wrangler pages dev web-build`.
 
 ## Každá změna
 
-1. Větev z čerstvého `origin/dev`: `claude/<téma>` nebo `codex/<téma>`.
-2. Nová funkce jde za přepínač v `devFeatures.ts` (v testovací verzi zapnutá, ve veřejné vypnutá).
-3. PR do `dev` s popisem v češtině, co se změnilo pro uživatele. CI (lint, typy, testy, sestavení webu) musí být zelené.
-4. Po začlenění se `dev` sám nasadí na `dev.kartoteka.pages.dev`.
-5. Do `main` jen přes PR `dev → main`, když to majitel řekne (zjevná oprava chyby může rovnou).
-6. Po každém nasazení aktualizovat stavovou stránku „Kartotéka – kde co běží“.
+1. Větev z čerstvého `origin/main`: `claude/<téma>` nebo `codex/<téma>`.
+2. PR do `main` s popisem v češtině, co se změnilo pro uživatele. CI (lint, typy, testy, sestavení webu) musí být zelené.
+3. Po začlenění se `main` sám nasadí na `kartoteka.pages.dev`. `dev` se drží stejný jako `main`.
+4. Po každém nasazení aktualizovat stavovou stránku „Kartotéka – kde co běží“.
 
 ## Lokální spuštění
 
-`EXPO_PUBLIC_APP_CHANNEL=development EXPO_NO_TELEMETRY=1 npm run web` – testovací verze s oddělenými daty. Bez proměnné jde o veřejnou verzi.
+`EXPO_NO_TELEMETRY=1 npm run web`.
 
 ## iPhone
 

@@ -44,7 +44,7 @@ Docs: https://docs.expo.dev/eas/index.md
 
 - `index.ts` → `App.tsx` (screens). Pure logic lives in root modules with no React and no storage (`cardData.ts`, `scryfall.ts`), so `node --test` can test it through `tests/load.cjs`. Every new piece of logic gets a test there.
 - `appVersion.ts` decides test vs. public version (baked in at build time, `EXPO_PUBLIC_APP_CHANNEL`). The test version keeps its data under a separate storage key.
-- `devFeatures.ts` holds the switches; the Profile screen in the test version lists them.
+- `devFeatures.ts` holds feature switches for later (empty while there is one version).
 - Scanning: `cardHash.ts` (artwork hash + index format, shared with `scripts/scan-index/build.mjs`), `scanIdentify.ts` (collector line → artwork → language), `ScanScreen.tsx` (UI, web camera), `modules/card-scanner` (iPhone: VisionKit document camera + Vision OCR in all languages). The index `scan-index-v1.bin` is built weekly by the "Scan index" workflow into the release `scan-index`; the web build copies it into the site. Changing the hash means bumping the file name (v2) and rebuilding without the previous index.
 - `functions/api/` is for Cloudflare Pages Functions (server code for things the browser cannot call directly, e.g. Czech e-shops without CORS).
 
@@ -56,19 +56,18 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Kartotéka release tracking
 
-- `dev` deploys to dev.kartoteka.pages.dev (test version), `main` to kartoteka.pages.dev (public). Only release new features to `main` when the owner says so. An obvious bug fix (something visibly broken, no new behaviour) goes to `dev` and straight on to `main` without asking.
-- New features go behind a switch in `devFeatures.ts`: on in the test version, off in production until the owner releases them.
-- The status page has a section "Přepínače funkcí" mirroring `developmentFeatures`: whenever a switch is added, removed, renamed or released, update it (title, what it does, whether it is in the public version, what must happen before release).
-- After every deploy (dev, public, or an iPhone build), update the owner's status page "Kartotéka – kde co běží" (claude.ai artifact 8gEqQT18Jz9rGXyZRV3Yyr): what changed, where it is now, and the date.
+- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI) and is deployed to kartoteka.pages.dev. No feature switches, no separate test release. `dev` is kept equal to `main`.
+- When the owner starts sharing the app, switch to the Fakturo way: new features to `dev` (dev.kartoteka.pages.dev) behind switches in `devFeatures.ts`, released to `main` only when the owner says so. Until then `developmentFeatures` stays empty.
+- After every deploy (web or an iPhone build), update the owner's status page "Kartotéka – kde co běží" (claude.ai artifact 8gEqQT18Jz9rGXyZRV3Yyr): what changed, where it is now, and the date.
 
 ## Two agents on one repository (Claude and Codex)
 
 Claude (in the cloud) and Codex (on the owner's Mac) both work on Kartotéka. GitHub is the only source of truth; nobody's local copy is.
 
-- **Start from fresh `origin/dev`.** Before any change or review run `git fetch origin` and branch from `origin/dev`: `claude/<topic>` or `codex/<topic>`. Never build changes on a local `main` or on an old checkout.
-- **Name the commit.** A review or a test report starts with the commit hash it was done on (`git rev-parse --short HEAD`), and checks first that it is the current `origin/dev`.
-- **Everything goes through a pull request into `dev`**, with CI green before merging. Leave no uncommitted changes in `~/kartoteka`: the other agent cannot see them and they block the owner's `git pull`. If you cannot push, commit to a local branch and tell the owner its name.
-- **`main` only via a `dev` → `main` pull request**, when the owner says so (or for an obvious bug fix, see above). Never push to `main` directly.
+- **Start from fresh `origin/main`** (while there is one version, see above). Before any change or review run `git fetch origin` and branch from it: `claude/<topic>` or `codex/<topic>`. Never build changes on an old checkout.
+- **Name the commit.** A review or a test report starts with the commit hash it was done on (`git rev-parse --short HEAD`), and checks first that it is the current `origin/main`.
+- **Everything goes through a pull request into `main`** (later `dev`), with CI green before merging. Leave no uncommitted changes in `~/kartoteka`: the other agent cannot see them and they block the owner's `git pull`. If you cannot push, commit to a local branch and tell the owner its name.
+- Never push to `main` directly; always a pull request.
 - **One agent per area at a time.** Before starting, check open pull requests (`gh pr list`); if the other agent has one touching the same files, wait or build on top of it.
 - **The PR description says what changed for the user**, in Czech. Claude keeps the status page up to date from it; Codex does not need to.
 - **`~/kartoteka` on the Mac is for builds.** It stays on `main`, clean, and is refreshed before every build with `git checkout -- package.json package-lock.json && git pull`.

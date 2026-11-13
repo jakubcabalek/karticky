@@ -38,8 +38,8 @@ export default function App() {
   const [features, setFeatures] = useState(readDevelopmentFeatures);
   const [openDeckId, setOpenDeckId] = useState<string | null>(null);
   const [deckPickerCard, setDeckPickerCard] = useState<CardPrinting | null>(null);
-  const showPrices = features.cardPrices;
-  const tabs = allTabs.filter(item => item.key !== 'scan' || features.cardScanner);
+  const showPrices = true;
+  const tabs = allTabs;
 
   useEffect(() => {
     void loadLibrary().then(saved => { setLibrary(saved); setLoaded(true); });
@@ -69,7 +69,7 @@ export default function App() {
       <View style={s.content}>
         {!loaded ? <ActivityIndicator style={s.loading} /> : (
           <>
-            {tab === 'scan' && features.cardScanner && (
+            {tab === 'scan' && (
               <ScanScreen
                 onAdd={(card, where, finish) => change(lib => where === 'collection'
                   ? { ...lib, collection: addCard(lib.collection, card, { finish, now: nowIso() }) }
@@ -81,7 +81,7 @@ export default function App() {
               <SearchScreen
                 library={library}
                 showPrices={showPrices}
-                showShopPrices={features.shopPrices}
+                showShopPrices
                 onAdd={(card, where) => change(lib => where === 'collection'
                   ? { ...lib, collection: addCard(lib.collection, card, { now: nowIso() }) }
                   : { ...lib, wishlist: addCard(lib.wishlist, card, { now: nowIso() }) })}
@@ -318,17 +318,19 @@ function ProfileScreen({ library, features, onFeatures, onSwitchVersion }: {
       <Text style={s.title}>Profil</Text>
       <Text style={s.muted}>Sbírka {totalCards(library.collection)} karet · Wishlist {totalCards(library.wishlist)} · Balíčků {library.decks.length}</Text>
       <Text style={s.muted}>Data jsou zatím uložená jen v tomto {Platform.OS === 'web' ? 'prohlížeči' : 'zařízení'}.</Text>
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Vývojová verze</Text>
-        <SwitchRow
-          title={isDevelopmentVersion ? 'Zapnuto' : 'Vypnuto'}
-          description={isDevelopmentVersion ? 'Testovací data jsou oddělená od běžné verze.' : 'Přepni na testování nových změn s oddělenými daty.'}
-          value={isDevelopmentVersion}
-          onChange={onSwitchVersion}
-        />
-        <Text style={s.footnote}>Verze {appRevision}</Text>
-      </View>
       {isDevelopmentVersion && (
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Vývojová verze</Text>
+          <SwitchRow
+            title="Zapnuto"
+            description="Testovací data jsou oddělená od běžné verze."
+            value
+            onChange={onSwitchVersion}
+          />
+        </View>
+      )}
+      <Text style={s.footnote}>Verze {appRevision}</Text>
+      {isDevelopmentVersion && developmentFeatures.length > 0 && (
         <View style={s.section}>
           <Text style={s.sectionTitle}>Zapínání a vypínání funkcí</Text>
           {developmentFeatures.map(feature => (
