@@ -115,5 +115,12 @@ export const s = StyleSheet.create({
   shop: { gap: 6, borderTopWidth: 1, borderTopColor: color.line, paddingTop: 8 },
   offer: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   soldOut: { opacity: 0.55 },
+  explain: { gap: 8, backgroundColor: color.bg, borderRadius: 12, padding: 12 },
+  oracle: { color: color.fg, fontSize: 15, lineHeight: 21 },
+  keyword: { gap: 2, borderLeftWidth: 3, borderLeftColor: color.accent, paddingLeft: 10 },
+  keywordTerm: { color: color.fg, fontWeight: '800', fontSize: 15 },
+  targetOption: { backgroundColor: color.card, borderColor: color.line, borderWidth: 1, borderRadius: 16, padding: 16, gap: 4 },
+  targetOptionActive: { borderColor: color.accent, borderWidth: 2 },
+  targetBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: color.accentSoft, borderRadius: 12, padding: 12 },
   sheetRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: color.line },
 });

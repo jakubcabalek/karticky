@@ -59,3 +59,13 @@ test('all printings follow every result page and ask for every language', async 
   assert.match(decodeURIComponent(asked[0]), /oracleid:oracle-1 lang:any/);
   assert.deepEqual(plain(printings).map(p => [p.id, p.lang, p.illustrationId ?? null]), [['a', 'en', null], ['b', 'ja', 'ill']]);
 });
+
+test('rules text, keywords and power/toughness are kept, both faces for double-faced cards', () => {
+  const card = plain(scryfall.parseCard({
+    id: 'x', name: 'A // B', keywords: ['Flying', 3],
+    card_faces: [{ oracle_text: 'Flying', power: '2', toughness: '3' }, { oracle_text: 'Lifelink' }],
+  }));
+  assert.equal(card.oracleText, 'Flying\n//\nLifelink');
+  assert.deepEqual(card.keywords, ['Flying']);
+  assert.equal(`${card.power}/${card.toughness}`, '2/3');
+});

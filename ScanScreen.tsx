@@ -2,9 +2,11 @@
 // iPhone: the system document camera (finds the card edges, can scan a whole stack),
 // text read by Vision in any language. Web: live camera with a card-shaped guide, or a photo.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { CardPrinting, Finish } from './cardData';
+import { entryPrice, formatPrice, type CardPrinting, type Deck, type DeckBoard, type Finish } from './cardData';
+import CardExplain from './CardExplain';
+import ShopPrices from './ShopPrices';
 import type { Pixels, ScanIndex } from './cardHash';
 import { identifyCard, type ScanResult } from './scanIdentify';
 import { loadScanIndex } from './scanIndexLoader';
@@ -22,12 +24,29 @@ const CARD_HEIGHT = 340;
 
 type Item = { key: string; state: 'working' | 'done'; result?: ScanResult; chosenId?: string; finish: Finish; added?: string };
 
+/** Where the cards scanned now go; chosen every time scanning opens. */
+export type ScanTarget = { kind: 'collection' } | { kind: 'wishlist' } | { kind: 'deck'; deckId: string; board: DeckBoard } | { kind: 'look' };
+export type AddTarget = Exclude<ScanTarget, { kind: 'look' }>;
+
 type Props = {
-  onAdd: (card: CardPrinting, where: 'collection' | 'wishlist', finish: Finish) => void;
-  onAddToDeck: (card: CardPrinting) => void;
+  decks: Deck[];
+  onCreateDeck: (name: string) => string;
+  onAdd: (card: CardPrinting, target: AddTarget, finish: Finish) => void;
 };
 
-export default function ScanScreen({ onAdd, onAddToDeck }: Props) {
+const targetName = (target: ScanTarget, decks: Deck[]) => {
+  if (target.kind === 'collection') return 'do sbírky';
+  if (target.kind === 'wishlist') return 'na wishlist';
+  if (target.kind === 'look') return 'jen se podívat a zjistit ceny';
+  const deck = decks.find(item => item.id === target.deckId);
+  return `do balíčku ${deck?.name ?? ''}${target.board === 'sideboard' ? ' (sideboard)' : ''}`;
+};
+
+const addedLabel = (target: AddTarget, decks: Deck[]) =>
+  target.kind === 'collection' ? 'Ve sbírce' : target.kind === 'wishlist' ? 'Na wishlistu' : `V balíčku ${decks.find(d => d.id === target.deckId)?.name ?? ''}`;
+
+export default function ScanScreen({ decks, onCreateDeck, onAdd }: Props) {
+  const [target, setTarget] = useState<ScanTarget | null>(null);
   const [index, setIndex] = useState<ScanIndex | null | undefined>(undefined);
   const [language, setLanguage] = useState('en');
   const [items, setItems] = useState<Item[]>([]);
@@ -70,10 +89,22 @@ export default function ScanScreen({ onAdd, onAddToDeck }: Props) {
   };
 
   const found = items.filter(item => item.state === 'done' && item.result?.status === 'found' && !item.added);
+  const add = (item: Item, where: AddTarget) => {
+    const card = chosenCard(item);
+    if (!card) return;
+    onAdd(card, where, item.finish);
+    update(item.key, { added: addedLabel(where, decks) });
+  };
+
+  if (!target) return <TargetChooser decks={decks} onCreateDeck={onCreateDeck} onChoose={setTarget} />;
 
   return (
     <ScrollView contentContainerStyle={s.screen}>
       <Text style={s.title}>Skenovat</Text>
+      <View style={s.targetBar}>
+        <Text style={[s.rowTitle, s.grow]}>Skenuješ {targetName(target, decks)}</Text>
+        <Pressable onPress={() => setTarget(null)}><Text style={s.link}>Změnit</Text></Pressable>
+      </View>
       <Text style={s.muted}>
         Karta se pozná podle ilustrace, ta je stejná ve všech jazycích. Jazyk se vezme z drobného textu vlevo dole
         nebo z písma na kartě; když není nic čitelné, použije se tvůj obvyklý jazyk.
@@ -107,29 +138,19 @@ export default function ScanScreen({ onAdd, onAddToDeck }: Props) {
       )}
       {!!error && <Text style={s.error}>{error}</Text>}
 
-      {found.length > 1 && (
-        <SmallButton
-          label={`Přidat ${found.length} nalezených do sbírky`}
-          onPress={() => found.forEach(item => {
-            const card = chosenCard(item);
-            if (card) { onAdd(card, 'collection', item.finish); update(item.key, { added: 'Ve sbírce' }); }
-          })}
-        />
+      {found.length > 1 && target.kind !== 'look' && (
+        <SmallButton label={`Přidat ${found.length} nalezených ${targetName(target, decks)}`} onPress={() => found.forEach(item => add(item, target))} />
       )}
 
       {items.map(item => (
         <ScanResultCard
           key={item.key}
           item={item}
+          target={target}
+          addLabel={target.kind === 'look' ? '' : `Přidat ${targetName(target, decks)}`}
           onChoose={id => update(item.key, { chosenId: id })}
           onFinish={finish => update(item.key, { finish })}
-          onAdd={where => {
-            const card = chosenCard(item);
-            if (!card) return;
-            onAdd(card, where, item.finish);
-            update(item.key, { added: where === 'collection' ? 'Ve sbírce' : 'Ve wishlistu' });
-          }}
-          onAddToDeck={() => { const card = chosenCard(item); if (card) onAddToDeck(card); }}
+          onAdd={where => add(item, where)}
           onDiscard={() => setItems(current => current.filter(other => other.key !== item.key))}
         />
       ))}
@@ -141,12 +162,13 @@ export default function ScanScreen({ onAdd, onAddToDeck }: Props) {
 const allCandidates = (result?: ScanResult) => result?.printing ? [result.printing, ...result.alternatives] : [];
 const chosenCard = (item: Item) => allCandidates(item.result).find(card => card.id === item.chosenId) ?? item.result?.printing;
 
-function ScanResultCard({ item, onChoose, onFinish, onAdd, onAddToDeck, onDiscard }: {
+function ScanResultCard({ item, target, addLabel, onChoose, onFinish, onAdd, onDiscard }: {
   item: Item;
+  target: ScanTarget;
+  addLabel: string;
   onChoose: (id: string) => void;
   onFinish: (finish: Finish) => void;
-  onAdd: (where: 'collection' | 'wishlist') => void;
-  onAddToDeck: () => void;
+  onAdd: (where: AddTarget) => void;
   onDiscard: () => void;
 }) {
   if (item.state === 'working') {
@@ -202,15 +224,80 @@ function ScanResultCard({ item, onChoose, onFinish, onAdd, onAddToDeck, onDiscar
         <Chip label="Bez foilu" active={item.finish === 'nonfoil'} onPress={() => onFinish('nonfoil')} />
         <Chip label="Foil" active={item.finish === 'foil'} onPress={() => onFinish('foil')} />
       </View>
+      {target.kind === 'look' && <CardPriceLine card={card} finish={item.finish} />}
+      {target.kind === 'look' && <ShopPrices card={card} autoLoad />}
+      <CardExplain card={card} />
       {item.added ? <Text style={s.price}>{item.added} ✓</Text> : (
         <View style={s.actions}>
-          <SmallButton label="+ Sbírka" onPress={() => onAdd('collection')} />
-          <SmallButton label="+ Wishlist" onPress={() => onAdd('wishlist')} />
-          <SmallButton label="+ Balíček" onPress={onAddToDeck} />
+          {target.kind === 'look'
+            ? <SmallButton label="Chci ji (na wishlist)" onPress={() => onAdd({ kind: 'wishlist' })} />
+            : <Pressable style={[s.primaryButton, s.grow]} onPress={() => onAdd(target)}><Text style={s.primaryButtonText}>{addLabel}</Text></Pressable>}
           <SmallButton label="Zahodit" danger onPress={onDiscard} />
         </View>
       )}
     </View>
+  );
+}
+
+function CardPriceLine({ card, finish }: { card: CardPrinting; finish: Finish }) {
+  const entry = { key: card.id, card, quantity: 1, finish, addedAt: '' };
+  const eur = entryPrice(entry, 'eur');
+  const usd = entryPrice(entry, 'usd');
+  return (
+    <Text style={s.rowTitle}>
+      {eur === null && usd === null ? 'Cena na Cardmarketu není známá' : [
+        eur !== null ? `Cardmarket ${formatPrice(eur, 'eur')}` : null,
+        usd !== null ? `TCGplayer ${formatPrice(usd, 'usd')}` : null,
+      ].filter(Boolean).join(' · ')}
+    </Text>
+  );
+}
+
+function TargetChooser({ decks, onCreateDeck, onChoose }: { decks: Deck[]; onCreateDeck: (name: string) => string; onChoose: (target: ScanTarget) => void }) {
+  const [pickingDeck, setPickingDeck] = useState(false);
+  const [board, setBoard] = useState<DeckBoard>('main');
+  const [name, setName] = useState('');
+  const options: { kind: 'collection' | 'wishlist' | 'look'; title: string; text: string }[] = [
+    { kind: 'collection', title: 'Do sbírky', text: 'Karty, které máš. Naskenuješ hromádku a přidáš ji naráz.' },
+    { kind: 'wishlist', title: 'Na wishlist', text: 'Karty, které sháníš, třeba u kamaráda nebo v obchodě.' },
+    { kind: 'look', title: 'Jen se podívat', text: 'Nic se neuloží. Ukáže, co karta umí a kolik stojí na Cardmarketu a v českých obchodech.' },
+  ];
+  return (
+    <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
+      <Text style={s.title}>Skenovat</Text>
+      <Text style={s.muted}>Kam s kartami, které teď naskenuješ?</Text>
+      {options.slice(0, 2).map(option => (
+        <Pressable key={option.kind} accessibilityRole="button" style={s.targetOption} onPress={() => onChoose({ kind: option.kind })}>
+          <Text style={s.rowTitle}>{option.title}</Text>
+          <Text style={s.muted}>{option.text}</Text>
+        </Pressable>
+      ))}
+      <Pressable accessibilityRole="button" style={[s.targetOption, pickingDeck && s.targetOptionActive]} onPress={() => setPickingDeck(open => !open)}>
+        <Text style={s.rowTitle}>Do balíčku</Text>
+        <Text style={s.muted}>Skládáš balíček: naskenované karty půjdou rovnou do něj.</Text>
+      </Pressable>
+      {pickingDeck && (
+        <View style={s.section}>
+          <View style={s.actions}>
+            <Chip label="Hlavní balíček" active={board === 'main'} onPress={() => setBoard('main')} />
+            <Chip label="Sideboard" active={board === 'sideboard'} onPress={() => setBoard('sideboard')} />
+          </View>
+          {decks.map(deck => (
+            <Pressable key={deck.id} style={s.card} onPress={() => onChoose({ kind: 'deck', deckId: deck.id, board })}>
+              <Text style={s.rowTitle}>{deck.name}</Text>
+            </Pressable>
+          ))}
+          <View style={s.row}>
+            <TextInput style={[s.input, s.grow]} value={name} onChangeText={setName} placeholder={decks.length ? 'Nebo nový balíček…' : 'Název nového balíčku'} />
+            <SmallButton label="Založit" onPress={() => onChoose({ kind: 'deck', deckId: onCreateDeck(name), board })} />
+          </View>
+        </View>
+      )}
+      <Pressable accessibilityRole="button" style={s.targetOption} onPress={() => onChoose({ kind: 'look' })}>
+        <Text style={s.rowTitle}>{options[2].title}</Text>
+        <Text style={s.muted}>{options[2].text}</Text>
+      </Pressable>
+    </ScrollView>
   );
 }
 

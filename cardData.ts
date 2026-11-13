@@ -18,6 +18,12 @@ export type CardPrinting = {
   rarity: string;
   typeLine: string;
   manaCost: string;
+  /** Official English rules text (Oracle); double-faced cards have both faces, separated by "//". */
+  oracleText?: string;
+  /** Keyword abilities as Scryfall lists them, e.g. ["Flying", "Ward"]. */
+  keywords?: string[];
+  power?: string;
+  toughness?: string;
   imageSmall?: string;
   imageNormal?: string;
   prices: CardPrices;

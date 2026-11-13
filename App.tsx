@@ -9,6 +9,7 @@ import { loadLibrary, saveLibrary } from './libraryStorage';
 import { searchCards } from './scryfall';
 import ScanScreen from './ScanScreen';
 import ShopPrices from './ShopPrices';
+import CardExplain from './CardExplain';
 import { CardRow, EntryCard, SmallButton, SwitchRow, s } from './ui';
 import {
   addCard, copiesOf, createDeck, deleteDeck, emptyLibrary, formatPrice, listValue, markWishAcquired,
@@ -71,10 +72,18 @@ export default function App() {
           <>
             {tab === 'scan' && (
               <ScanScreen
-                onAdd={(card, where, finish) => change(lib => where === 'collection'
-                  ? { ...lib, collection: addCard(lib.collection, card, { finish, now: nowIso() }) }
-                  : { ...lib, wishlist: addCard(lib.wishlist, card, { finish, now: nowIso() }) })}
-                onAddToDeck={setDeckPickerCard}
+                decks={library.decks}
+                onCreateDeck={name => {
+                  const id = newId();
+                  change(lib => createDeck(lib, name, { id, now: nowIso() }));
+                  return id;
+                }}
+                onAdd={(card, target, finish) => change(lib => {
+                  const options = { finish, now: nowIso() };
+                  if (target.kind === 'collection') return { ...lib, collection: addCard(lib.collection, card, options) };
+                  if (target.kind === 'wishlist') return { ...lib, wishlist: addCard(lib.wishlist, card, options) };
+                  return updateDeck(lib, target.deckId, deck => boardUpdate(target.board, addCard(deck[target.board], card, options)), nowIso());
+                })}
               />
             )}
             {tab === 'search' && (
@@ -211,6 +220,7 @@ function SearchScreen({ library, showPrices, showShopPrices, onAdd, onAddToDeck 
             <SmallButton label="+ Wishlist" onPress={() => onAdd(card, 'wishlist')} />
             <SmallButton label="+ Balíček" onPress={() => onAddToDeck(card)} />
           </View>
+          <CardExplain card={card} />
           {showShopPrices && <ShopPrices card={card} />}
         </View>
       ))}

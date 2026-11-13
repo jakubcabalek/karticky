@@ -1,5 +1,5 @@
 // "Ceny v obchodech" under a card: asks our Cloudflare function, which asks the Czech shops.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from 'react-native';
 import { isDevelopmentVersion, versionUrl } from './appVersion';
 import type { CardPrinting } from './cardData';
@@ -18,7 +18,7 @@ export const fetchShopPrices = async (name: string): Promise<ShopResult[]> => {
   return body.shops ?? [];
 };
 
-export default function ShopPrices({ card }: { card: CardPrinting }) {
+export default function ShopPrices({ card, autoLoad = false }: { card: CardPrinting; autoLoad?: boolean }) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [shops, setShops] = useState<ShopResult[]>([]);
 
@@ -31,6 +31,12 @@ export default function ShopPrices({ card }: { card: CardPrinting }) {
       setState('error');
     }
   };
+
+  useEffect(() => {
+    if (autoLoad) void load();
+    // Load once per card; `load` changes on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLoad, card.name]);
 
   if (state === 'idle') return <SmallButton label="Ceny v obchodech" onPress={() => void load()} />;
   if (state === 'loading') return <View style={s.row}><ActivityIndicator /><Text style={s.muted}>Ptám se obchodů…</Text></View>;
