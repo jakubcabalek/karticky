@@ -27,7 +27,10 @@ if (previousPath) {
   }
 }
 
-const bulk = await json('https://api.scryfall.com/bulk-data/unique-artwork');
+// The list of bulk files; "unique_artwork" is one card per unique artwork.
+const bulkList = await json('https://api.scryfall.com/bulk-data');
+const bulk = (bulkList.data ?? []).find(item => item.type === 'unique_artwork');
+if (!bulk?.download_uri) throw new Error(`Scryfall bulk data "unique_artwork" not found: ${JSON.stringify(bulkList).slice(0, 300)}`);
 console.log(`Scryfall unique artwork from ${bulk.updated_at}`);
 const cards = await json(bulk.download_uri);
 
