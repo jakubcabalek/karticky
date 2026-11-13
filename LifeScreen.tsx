@@ -2,7 +2,7 @@
 // upper half of the panels is turned upside down. Tap the left half for −1, the
 // right half for +1, hold for −10/+10. The name opens poison, commander damage and
 // other counters. The game is saved, so switching apps loses nothing.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -50,12 +50,12 @@ export default function LifeScreen() {
   useEffect(() => () => { if (tickTimer.current) clearTimeout(tickTimer.current); }, []);
 
   // The "−3" bubble disappears on its own a moment after the last tap.
-  const play = (change: (current: Game) => Game) => {
+  const play = useCallback((change: (current: Game) => Game) => {
     setGame(current => current ? change(current) : current);
     setNow(Date.now());
     if (tickTimer.current) clearTimeout(tickTimer.current);
     tickTimer.current = setTimeout(() => setNow(Date.now()), 1600);
-  };
+  }, []);
 
   if (!loaded) return null;
   if (!game || setup) {
