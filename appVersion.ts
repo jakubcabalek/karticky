@@ -6,7 +6,7 @@ export const isDevelopmentVersion = (runtimeChannel ?? process.env.EXPO_PUBLIC_A
 export const appRevision = process.env.EXPO_PUBLIC_APP_REVISION?.slice(0, 7) || 'lokální';
 
 export const versionUrl = (development: boolean) =>
-  development ? 'https://dev.karticky.pages.dev/' : 'https://karticky.pages.dev/';
+  development ? 'https://dev.karticky-9w4.pages.dev/' : 'https://karticky-9w4.pages.dev/';
 
 // The app owner's account; only it sees the switch to the test version in the public app.
 export const ownerEmail = 'jakubcabalek@gmail.com';

@@ -1,8 +1,8 @@
 # Kartičky: nasazení a postup vývoje
 
-Web se sestavuje jako statická aplikace Expo do složky `web-build` a běží na Cloudflare Pages: `main` → `karticky.pages.dev`. iPhone aplikace se staví přes EAS.
+Web se sestavuje jako statická aplikace Expo do složky `web-build` a běží na Cloudflare Pages: `main` → `karticky-9w4.pages.dev`. iPhone aplikace se staví přes EAS.
 
-**Zatím je jen jedna verze.** Aplikaci ještě nikdo jiný nepoužívá, takže všechno jde rovnou do `main`, bez přepínačů funkcí a bez testovací verze. Až ji začneš sdílet, přejdeme na postup z Fakturo (`dev` na dev.karticky.pages.dev, přepínače, vydání do `main` na tvůj pokyn).
+**Zatím je jen jedna verze.** Aplikaci ještě nikdo jiný nepoužívá, takže všechno jde rovnou do `main`, bez přepínačů funkcí a bez testovací verze. Až ji začneš sdílet, přejdeme na postup z Fakturo (`dev` na dev.karticky-9w4.pages.dev, přepínače, vydání do `main` na tvůj pokyn).
 
 Data jsou uložená v zařízení (AsyncStorage, na webu v prohlížeči). Účet je nepovinný: po přihlášení (Google, Facebook nebo e-mail) se sbírka, wishlist a balíčky synchronizují přes Supabase s Row Level Security, stejně jako ve Fakturo.
 
@@ -20,7 +20,7 @@ Data jsou uložená v zařízení (AsyncStorage, na webu v prohlížeči). Úče
 
 1. Vytvořit Supabase projekt v evropském regionu a v SQL Editoru spustit `supabase/schema.sql`.
 2. Project URL a Publishable key dát do `.env` (podle `.env.example`), do GitHub Variables `EXPO_PUBLIC_SUPABASE_URL` a `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` a do Expo prostředí `preview` a `production` (pro iPhone build). Nikdy ne Secret ani `service_role` key.
-3. Supabase → Authentication → URL Configuration: Site URL `https://karticky.pages.dev`, Redirect URLs `https://karticky.pages.dev/**`, `http://localhost:8081/**` a `karticky://auth-callback`.
+3. Supabase → Authentication → URL Configuration: Site URL `https://karticky-9w4.pages.dev`, Redirect URLs `https://karticky-9w4.pages.dev/**`, `http://localhost:8081/**` a `karticky://auth-callback`.
 4. **Google:** Google Cloud Console → APIs & Services → OAuth consent screen (externí, název Kartičky), pak Credentials → OAuth client ID typu Web application. Authorized redirect URI: `https://<projekt>.supabase.co/auth/v1/callback`. Client ID a Secret vložit do Supabase → Authentication → Providers → Google.
 5. **Facebook:** developers.facebook.com → nová aplikace s Facebook Login. Valid OAuth Redirect URIs: stejná adresa `…/auth/v1/callback`. Aplikace potřebuje odkaz na zásady ochrany osobních údajů a na smazání dat a musí být přepnutá do režimu Live, jinak se přihlásí jen správci aplikace. App ID a App Secret vložit do Supabase → Providers → Facebook.
 6. **Apple:** developer.apple.com → Certificates, IDs & Profiles: u App ID `com.jakubcabalek.karticky` zapnout Sign in with Apple; vytvořit Services ID (např. `com.jakubcabalek.karticky.web`) s doménou `<projekt>.supabase.co` a Return URL `https://<projekt>.supabase.co/auth/v1/callback`; vytvořit Key se Sign in with Apple. V Supabase → Providers → Apple vyplnit Services ID, Team ID, Key ID a klíč (Supabase z něj vytvoří secret, ten platí 6 měsíců – obnovit včas).
@@ -36,13 +36,13 @@ Na iPhonu se Google a Facebook otevřou v Safari a vrátí se do aplikace přes 
 
 ## Ceny z obchodů
 
-Funkce `functions/api/shop-prices.js` běží na Cloudflare Pages vedle webu. Adresy vyhledávání obchodů jsou označené `verified: false`, dokud je někdo neověří na skutečném webu obchodu (a nepřečte jejich podmínky). Při `npx expo start` funkce neběží; vyzkoušet jde na karticky.pages.dev nebo přes `npx wrangler pages dev web-build`.
+Funkce `functions/api/shop-prices.js` běží na Cloudflare Pages vedle webu. Adresy vyhledávání obchodů jsou označené `verified: false`, dokud je někdo neověří na skutečném webu obchodu (a nepřečte jejich podmínky). Při `npx expo start` funkce neběží; vyzkoušet jde na karticky-9w4.pages.dev nebo přes `npx wrangler pages dev web-build`.
 
 ## Každá změna
 
 1. Větev z čerstvého `origin/main`: `claude/<téma>` nebo `codex/<téma>`.
 2. PR do `main` s popisem v češtině, co se změnilo pro uživatele. CI (lint, typy, testy, sestavení webu) musí být zelené.
-3. Po začlenění se `main` sám nasadí na `karticky.pages.dev`. `dev` se drží stejný jako `main`.
+3. Po začlenění se `main` sám nasadí na `karticky-9w4.pages.dev`. `dev` se drží stejný jako `main`.
 4. Po každém nasazení aktualizovat stavovou stránku „Kartičky – kde co běží“.
 
 ## Lokální spuštění
