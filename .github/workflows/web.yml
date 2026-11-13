@@ -54,6 +54,8 @@ jobs:
             true
           }
           check token "$TOKEN"
+          # Which unusual characters (only those, never letters or digits) and where.
+          python3 -c "import os; v=os.environ['TOKEN']; print('token: unusual characters', sorted({repr(c) for c in v if not (c.isascii() and (c.isalnum() or c in '-_'))}), 'at positions', [i for i,c in enumerate(v) if not (c.isascii() and (c.isalnum() or c in '-_'))]); print('token: starts with', repr(v[:5]) if v[:5].isalpha() and v[:5].islower() else '(not a lowercase prefix)')"
           check account "$ACCOUNT"
           [[ "$ACCOUNT" =~ ^[0-9a-f]{32}$ ]] && echo "account: looks like an account ID" || echo "account: does NOT look like a 32-character account ID"
       - name: Deploy to Cloudflare Pages
