@@ -1,0 +1,42 @@
+name: Web checks and deployment
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: kartoteka-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_APP_CHANNEL: ${{ github.ref == 'refs/heads/dev' && 'development' || 'production' }}
+      EXPO_PUBLIC_APP_REVISION: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Until the first `npx expo install` on the Mac commits package-lock.json, install without it.
+      - run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run web:build
+      - name: Deploy to Cloudflare Pages
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name != 'pull_request' && vars.CLOUD_DEPLOY_READY == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy web-build --project-name=kartoteka --branch=${{ github.ref_name }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
