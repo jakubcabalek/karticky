@@ -33,10 +33,14 @@ const bulkList = await json('https://api.scryfall.com/bulk-data');
 // ("default_cards") and keep one per artwork below.
 const files = bulkList.data ?? [];
 console.log(`Bulk files: ${files.map(item => item.type).join(', ')}`);
-const bulk = files.find(item => /artwork/.test(item.type)) ?? files.find(item => item.type === 'default_cards');
-if (!bulk?.download_uri) throw new Error('Scryfall has neither unique artwork nor default cards bulk data.');
+const listed = files.find(item => /artwork/.test(item.type)) ?? files.find(item => item.type === 'default_cards');
+if (!listed) throw new Error('Scryfall has neither unique artwork nor default cards bulk data.');
+// The download address is in the list, or else in the file's own record.
+const bulk = listed.download_uri ? listed : await json(listed.uri);
+const downloadUri = bulk.download_uri ?? bulk.download_url ?? bulk.url;
+if (!downloadUri) throw new Error(`No download address for ${listed.type}: ${JSON.stringify(bulk).slice(0, 600)}`);
 console.log(`Scryfall unique artwork from ${bulk.updated_at}`);
-const cards = await json(bulk.download_uri);
+const cards = await json(downloadUri);
 
 const wanted = [];
 const seenArtwork = new Set();
