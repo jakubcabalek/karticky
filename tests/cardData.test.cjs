@@ -53,3 +53,31 @@ test('malformed saved data loads as a safe, empty-ish library', () => {
   assert.equal(loaded.wishlist.length, 0);
   assert.deepEqual(plain(loaded.decks).map(d => [d.id, d.name, d.main.length]), [['d', 'Balíček', 0]]);
 });
+
+test('deletions are remembered and survive a merge with another device', () => {
+  let phone = data.addCard([], card('a', 'Bolt'), { now: '2026-11-01T00:00:00.000Z' });
+  phone = data.addCard(phone, card('b', 'Elves'), { now: '2026-11-01T00:00:00.000Z' });
+  const before = { ...data.emptyLibrary(), collection: phone };
+  const after = data.recordDeletions(before, { ...before, collection: data.setQuantity(phone, 'a:nonfoil', 0) }, '2026-11-02T00:00:00.000Z');
+  assert.equal(after.deleted['c:a:nonfoil'], '2026-11-02T00:00:00.000Z');
+
+  // The computer still has Bolt, plus a new Wishlist card; the phone deleted Bolt.
+  const computer = { ...before, wishlist: data.addCard([], card('c', 'Sol Ring'), { now: '2026-11-03T00:00:00.000Z' }) };
+  const merged = data.mergeLibraries(after, computer);
+  assert.deepEqual(plain(merged.collection).map(e => e.key), ['b:nonfoil']);
+  assert.deepEqual(plain(merged.wishlist).map(e => e.key), ['c:nonfoil']);
+
+  // Added again after deleting: it stays.
+  const readded = { ...after, collection: data.addCard(after.collection, card('a', 'Bolt'), { now: '2026-11-04T00:00:00.000Z' }) };
+  assert.equal(data.mergeLibraries(readded, computer).collection.length, 2);
+});
+
+test('merging decks keeps the newer version and drops deleted decks', () => {
+  const now = '2026-11-01T00:00:00.000Z';
+  const base = data.createDeck(data.createDeck(data.emptyLibrary(), 'Elfové', { id: 'd1', now }), 'Goblini', { id: 'd2', now });
+  const renamed = data.updateDeck(base, 'd1', () => ({ name: 'Elfové 2' }), '2026-11-05T00:00:00.000Z');
+  const deletedGoblins = data.recordDeletions(base, data.deleteDeck(base, 'd2'), '2026-11-06T00:00:00.000Z');
+  const merged = data.mergeLibraries(deletedGoblins, renamed);
+  assert.deepEqual(plain(merged.decks).map(d => d.name), ['Elfové 2']);
+  assert.equal(data.sameLibrary(merged, data.mergeLibraries(merged, merged)), true);
+});

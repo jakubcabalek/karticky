@@ -34,7 +34,11 @@ export type Finish = 'nonfoil' | 'foil';
 export type CardEntry = { key: string; card: CardPrinting; quantity: number; finish: Finish; addedAt: string };
 export type DeckBoard = 'main' | 'sideboard';
 export type Deck = { id: string; name: string; main: CardEntry[]; sideboard: CardEntry[]; createdAt: string; updatedAt: string };
-export type Library = { version: 1; collection: CardEntry[]; wishlist: CardEntry[]; decks: Deck[] };
+/**
+ * `deleted` remembers what was removed and when (keys "c:…" collection, "w:…" wishlist,
+ * "d:…" deck), so syncing with another device does not bring removed cards back.
+ */
+export type Library = { version: 1; collection: CardEntry[]; wishlist: CardEntry[]; decks: Deck[]; deleted?: Record<string, string> };
 export type PriceCurrency = 'eur' | 'usd';
 
 export const emptyLibrary = (): Library => ({ version: 1, collection: [], wishlist: [], decks: [] });
@@ -162,8 +166,59 @@ export const normalizeLibrary = (value: unknown): Library => {
     createdAt: typeof deck.createdAt === 'string' ? deck.createdAt : '',
     updatedAt: typeof deck.updatedAt === 'string' ? deck.updatedAt : '',
   })) : [];
-  return { version: 1, collection: entries(value.collection), wishlist: entries(value.wishlist), decks };
+  const deleted: Record<string, string> = {};
+  if (isRecord(value.deleted)) for (const [key, at] of Object.entries(value.deleted)) if (typeof at === 'string') deleted[key] = at;
+  return { version: 1, collection: entries(value.collection), wishlist: entries(value.wishlist), decks, deleted };
 };
+
+const TOMBSTONE_DAYS = 120;
+
+/** Notes what disappeared between two versions of the library, for syncing. */
+export const recordDeletions = (before: Library, after: Library, now: string): Library => {
+  const deleted = { ...(after.deleted ?? before.deleted ?? {}) };
+  const gone = (prefix: string, old: { key: string }[], current: { key: string }[]) => {
+    const kept = new Set(current.map(item => item.key));
+    for (const item of old) if (!kept.has(item.key)) deleted[`${prefix}:${item.key}`] = now;
+  };
+  gone('c', before.collection, after.collection);
+  gone('w', before.wishlist, after.wishlist);
+  gone('d', before.decks.map(deck => ({ key: deck.id })), after.decks.map(deck => ({ key: deck.id })));
+  const oldest = Date.parse(now) - TOMBSTONE_DAYS * 86_400_000;
+  for (const [key, at] of Object.entries(deleted)) if (Date.parse(at) < oldest) delete deleted[key];
+  return { ...after, deleted };
+};
+
+/**
+ * Combines this device's library with the one from the account. Cards and decks
+ * from both are kept; for the same card this device's count wins, for the same deck
+ * the more recently changed one. Something removed on either side stays removed,
+ * unless it was added again after the removal.
+ */
+export const mergeLibraries = (local: Library, remote: Library): Library => {
+  const deleted: Record<string, string> = { ...(remote.deleted ?? {}) };
+  for (const [key, at] of Object.entries(local.deleted ?? {})) if (!deleted[key] || deleted[key] < at) deleted[key] = at;
+  const alive = (key: string, changedAt: string) => !deleted[key] || deleted[key] < changedAt;
+  const mergeList = (prefix: string, mine: CardEntry[], theirs: CardEntry[]) => {
+    const byKey = new Map<string, CardEntry>();
+    for (const entry of [...theirs, ...mine]) byKey.set(entry.key, entry);
+    return [...byKey.values()].filter(entry => alive(`${prefix}:${entry.key}`, entry.addedAt));
+  };
+  const decks = new Map<string, Deck>();
+  for (const deck of [...remote.decks, ...local.decks]) {
+    const other = decks.get(deck.id);
+    if (!other || other.updatedAt <= deck.updatedAt) decks.set(deck.id, deck);
+  }
+  return {
+    version: 1,
+    collection: mergeList('c', local.collection, remote.collection),
+    wishlist: mergeList('w', local.wishlist, remote.wishlist),
+    decks: [...decks.values()].filter(deck => alive(`d:${deck.id}`, deck.updatedAt)),
+    deleted,
+  };
+};
+
+/** Same content, ignoring order: nothing to upload. */
+export const sameLibrary = (a: Library, b: Library) => JSON.stringify(normalizeLibrary(a)) === JSON.stringify(normalizeLibrary(b));
 
 export const formatPrice = (value: number, currency: PriceCurrency) =>
   new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: currency.toUpperCase() }).format(value);

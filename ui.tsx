@@ -122,5 +122,8 @@ export const s = StyleSheet.create({
   targetOption: { backgroundColor: color.card, borderColor: color.line, borderWidth: 1, borderRadius: 16, padding: 16, gap: 4 },
   targetOptionActive: { borderColor: color.accent, borderWidth: 2 },
   targetBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: color.accentSoft, borderRadius: 12, padding: 12 },
+  providerButton: { borderWidth: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  providerText: { fontWeight: '700', fontSize: 16 },
+  divider: { textAlign: 'center', marginVertical: 4 },
   sheetRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: color.line },
 });

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, DevSettings, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, DevSettings, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { appRevision, isDevelopmentVersion, versionUrl } from './appVersion';
@@ -11,9 +11,11 @@ import ScanScreen from './ScanScreen';
 import ShopPrices from './ShopPrices';
 import CardExplain from './CardExplain';
 import LifeScreen from './LifeScreen';
+import Account, { type SyncState } from './Account';
+import { listenForSignInLinks, readCloudLibrary, supabase, writeCloudLibrary, type Session } from './cloud';
 import { CardRow, EntryCard, SmallButton, SwitchRow, s } from './ui';
 import {
-  addCard, copiesOf, createDeck, deleteDeck, emptyLibrary, formatPrice, listValue, markWishAcquired,
+  addCard, copiesOf, createDeck, deleteDeck, emptyLibrary, formatPrice, listValue, markWishAcquired, mergeLibraries, recordDeletions, sameLibrary,
   missingForDeck, setQuantity, totalCards, updateDeck, wishMissingCards,
   type CardEntry, type CardPrinting, type DeckBoard, type Library,
 } from './cardData';
@@ -52,7 +54,87 @@ export default function App() {
     if (loaded) void saveLibrary(library);
   }, [library, loaded]);
 
-  const change = useCallback((update: (current: Library) => Library) => setLibrary(update), []);
+  const change = useCallback((update: (current: Library) => Library) => setLibrary(current => recordDeletions(current, update(current), nowIso())), []);
+
+  // ---- Account and sync: optional; signed in, the library is the same on every device ----
+  const [session, setSession] = useState<Session | null>(null);
+  const [syncState, setSyncState] = useState<SyncState>('off');
+  const [authError, setAuthError] = useState('');
+  const libraryRef = useRef(library);
+  libraryRef.current = library;
+  const revision = useRef<number | null>(null);
+  const lastSynced = useRef<Library | null>(null);
+  const syncedUser = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    void supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const stopLinks = listenForSignInLinks(setAuthError);
+    return () => { subscription.unsubscribe(); stopLinks(); };
+  }, []);
+
+  const push = useCallback(async (userId: string, attempt = 0): Promise<void> => {
+    const current = libraryRef.current;
+    if (lastSynced.current && sameLibrary(current, lastSynced.current)) { setSyncState('synced'); return; }
+    setSyncState('syncing');
+    const result = await writeCloudLibrary(userId, revision.current, current);
+    if ('saved' in result) {
+      revision.current = result.saved.revision;
+      lastSynced.current = current;
+      setSyncState('synced');
+      return;
+    }
+    // Another device saved in between: merge its version in and try again.
+    revision.current = result.conflict?.revision ?? null;
+    if (result.conflict) {
+      const merged = mergeLibraries(libraryRef.current, result.conflict.library);
+      libraryRef.current = merged;
+      setLibrary(merged);
+    }
+    if (attempt < 2) await push(userId, attempt + 1);
+    else setSyncState('error');
+  }, []);
+
+  const pull = useCallback(async (userId: string) => {
+    setSyncState('syncing');
+    try {
+      const remote = await readCloudLibrary(userId);
+      revision.current = remote?.revision ?? null;
+      if (remote) {
+        const merged = mergeLibraries(libraryRef.current, remote.library);
+        lastSynced.current = remote.library;
+        libraryRef.current = merged;
+        setLibrary(merged);
+      } else {
+        lastSynced.current = null;
+      }
+      await push(userId);
+    } catch {
+      setSyncState('error');
+    }
+  }, [push]);
+
+  const userId = session?.user.id ?? null;
+  useEffect(() => {
+    if (!loaded) return;
+    if (!userId) { syncedUser.current = null; revision.current = null; lastSynced.current = null; setSyncState('off'); return; }
+    if (syncedUser.current === userId) return;
+    syncedUser.current = userId;
+    void pull(userId);
+  }, [loaded, userId, pull]);
+
+  // Changes go to the account a moment after the last tap; coming back to the app fetches the other devices' changes.
+  useEffect(() => {
+    if (!loaded || !userId || syncedUser.current !== userId) return;
+    const timer = setTimeout(() => { void push(userId).catch(() => setSyncState('error')); }, 1500);
+    return () => clearTimeout(timer);
+  }, [library, loaded, userId, push]);
+  useEffect(() => {
+    if (!userId) return;
+    const subscription = AppState.addEventListener('change', state => { if (state === 'active') void pull(userId); });
+    return () => subscription.remove();
+  }, [userId, pull]);
 
   const switchVersion = () => {
     if (Platform.OS === 'web') {
@@ -130,6 +212,7 @@ export default function App() {
             {tab === 'life' && <LifeScreen />}
             {tab === 'profile' && (
               <ProfileScreen
+                account={<Account session={session} syncState={syncState} externalError={authError} />}
                 library={library}
                 features={features}
                 onFeatures={next => { saveDevelopmentFeatures(next); setFeatures(next); }}
@@ -320,7 +403,8 @@ function DecksScreen({ library, showPrices, openDeckId, onOpen, change }: {
   );
 }
 
-function ProfileScreen({ library, features, onFeatures, onSwitchVersion }: {
+function ProfileScreen({ account, library, features, onFeatures, onSwitchVersion }: {
+  account: React.ReactNode;
   library: Library;
   features: ReturnType<typeof readDevelopmentFeatures>;
   onFeatures: (next: ReturnType<typeof readDevelopmentFeatures>) => void;
@@ -330,7 +414,7 @@ function ProfileScreen({ library, features, onFeatures, onSwitchVersion }: {
     <ScrollView contentContainerStyle={s.screen}>
       <Text style={s.title}>Profil</Text>
       <Text style={s.muted}>Sbírka {totalCards(library.collection)} karet · Wishlist {totalCards(library.wishlist)} · Balíčků {library.decks.length}</Text>
-      <Text style={s.muted}>Data jsou zatím uložená jen v tomto {Platform.OS === 'web' ? 'prohlížeči' : 'zařízení'}.</Text>
+      {account}
       {isDevelopmentVersion && (
         <View style={s.section}>
           <Text style={s.sectionTitle}>Vývojová verze</Text>

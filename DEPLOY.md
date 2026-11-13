@@ -4,7 +4,7 @@ Web se sestavuje jako statická aplikace Expo do složky `web-build` a běží n
 
 **Zatím je jen jedna verze.** Aplikaci ještě nikdo jiný nepoužívá, takže všechno jde rovnou do `main`, bez přepínačů funkcí a bez testovací verze. Až ji začneš sdílet, přejdeme na postup z Fakturo (`dev` na dev.kartoteka.pages.dev, přepínače, vydání do `main` na tvůj pokyn).
 
-Data jsou zatím uložená jen v zařízení (AsyncStorage, na webu v prohlížeči). Cloud (Supabase s Row Level Security jako ve Fakturo) přijde později.
+Data jsou uložená v zařízení (AsyncStorage, na webu v prohlížeči). Účet je nepovinný: po přihlášení (Google, Facebook nebo e-mail) se sbírka, wishlist a balíčky synchronizují přes Supabase s Row Level Security, stejně jako ve Fakturo.
 
 ## Jednorázové nastavení
 
@@ -15,6 +15,17 @@ Data jsou zatím uložená jen v zařízení (AsyncStorage, na webu v prohlíže
    - Secrets: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (oprávnění `Cloudflare Pages → Edit`).
    - Variable: `CLOUD_DEPLOY_READY=true`, až je vše nastavené. Do té doby se změny jen kontrolují a sestavují.
 5. V `Settings → Branches` ochránit `main` (jen přes PR).
+
+## Účty (Supabase, Google, Facebook)
+
+1. Vytvořit Supabase projekt v evropském regionu a v SQL Editoru spustit `supabase/schema.sql`.
+2. Project URL a Publishable key dát do `.env` (podle `.env.example`), do GitHub Variables `EXPO_PUBLIC_SUPABASE_URL` a `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` a do Expo prostředí `preview` a `production` (pro iPhone build). Nikdy ne Secret ani `service_role` key.
+3. Supabase → Authentication → URL Configuration: Site URL `https://kartoteka.pages.dev`, Redirect URLs `https://kartoteka.pages.dev/**`, `http://localhost:8081/**` a `kartoteka://auth-callback`.
+4. **Google:** Google Cloud Console → APIs & Services → OAuth consent screen (externí, název Kartotéka), pak Credentials → OAuth client ID typu Web application. Authorized redirect URI: `https://<projekt>.supabase.co/auth/v1/callback`. Client ID a Secret vložit do Supabase → Authentication → Providers → Google.
+5. **Facebook:** developers.facebook.com → nová aplikace s Facebook Login. Valid OAuth Redirect URIs: stejná adresa `…/auth/v1/callback`. Aplikace potřebuje odkaz na zásady ochrany osobních údajů a na smazání dat a musí být přepnutá do režimu Live, jinak se přihlásí jen správci aplikace. App ID a App Secret vložit do Supabase → Providers → Facebook.
+6. Vyzkoušet na webu i v telefonu: přihlásit se, přidat kartu, zkontrolovat ji na druhém zařízení.
+
+Na iPhonu se Google a Facebook otevřou v Safari a vrátí se do aplikace přes `kartoteka://auth-callback` (schéma je v `app.json`, potřebuje nový build). **App Store:** aplikace, která nabízí přihlášení přes Google nebo Facebook, musí podle pravidel Applu nabídnout i Sign in with Apple. Pro vlastní testování v TestFlightu to nevadí, před vydáním do App Store je potřeba ho doplnit.
 
 ## Skenování karet
 
