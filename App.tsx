@@ -15,6 +15,7 @@ import CardExplain from './CardExplain';
 import LifeScreen from './LifeScreen';
 import Account, { type SyncState } from './Account';
 import { listenForSignInLinks, readCloudLibrary, supabase, writeCloudLibrary, type Session } from './cloud';
+import AppFrame, { type Section } from './nav';
 import { CardRow, EntryCard, SmallButton, SwitchRow, s } from './ui';
 import {
   addCard, boardChange, copiesOf, createDeck, emptyLibrary, formatPrice, libraryCardIds, listValue, markWishAcquired, mergeLibraries,
@@ -23,30 +24,20 @@ import {
   type CardEntry, type CardPrinting, type Library,
 } from './cardData';
 
-type Tab = 'scan' | 'search' | 'collection' | 'decks' | 'wishlist' | 'life' | 'profile';
-const allTabs: { key: Tab; label: string }[] = [
-  { key: 'scan', label: 'Skenovat' },
-  { key: 'search', label: 'Hledat' },
-  { key: 'collection', label: 'Sbírka' },
-  { key: 'decks', label: 'Balíčky' },
-  { key: 'wishlist', label: 'Wishlist' },
-  { key: 'life', label: 'Životy' },
-  { key: 'profile', label: 'Profil' },
-];
+type Tab = Section;
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const nowIso = () => new Date().toISOString();
 
 export default function App() {
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<Tab>('search');
+  const [tab, setTab] = useState<Tab>('scan');
   const [library, setLibrary] = useState<Library>(emptyLibrary);
   const [loaded, setLoaded] = useState(false);
   const [features, setFeatures] = useState(readDevelopmentFeatures);
   const [openDeckId, setOpenDeckId] = useState<string | null>(null);
   const [deckPickerCard, setDeckPickerCard] = useState<CardPrinting | null>(null);
   const showPrices = true;
-  const tabs = allTabs;
 
   useEffect(() => {
     void loadLibrary().then(saved => { setLibrary(saved); setLoaded(true); });
@@ -162,12 +153,19 @@ export default function App() {
   };
 
   return (
-    <View style={[s.app, { paddingTop: insets.top }]}>
+    <View style={[s.app, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar style="dark" />
       {isDevelopmentVersion && (
         <View style={s.devBand}><Text style={s.devBandText}>Testovací verze · {appRevision}</Text></View>
       )}
-      <View style={s.content}>
+      <AppFrame
+        section={tab}
+        onSection={setTab}
+        badges={{
+          collection: library.collection.length ? String(totalCards(library.collection)) : undefined,
+          wishlist: alerts ? `${alerts} zlevnilo` : undefined,
+        }}
+      >
         {!loaded ? <ActivityIndicator style={s.loading} /> : (
           <>
             {tab === 'scan' && (
@@ -237,14 +235,7 @@ export default function App() {
             )}
           </>
         )}
-      </View>
-      <View style={[s.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        {tabs.map(item => (
-          <Pressable key={item.key} accessibilityRole="tab" accessibilityState={{ selected: tab === item.key }} style={s.tab} onPress={() => setTab(item.key)}>
-            <Text style={[s.tabText, tab === item.key && s.tabTextActive]}>{item.label}{item.key === 'wishlist' && alerts ? ` (${alerts})` : ''}</Text>
-          </Pressable>
-        ))}
-      </View>
+      </AppFrame>
       <Modal visible={deckPickerCard !== null} transparent animationType="fade" onRequestClose={() => setDeckPickerCard(null)}>
         <Pressable style={s.backdrop} onPress={() => setDeckPickerCard(null)}>
           <View style={s.sheet}>

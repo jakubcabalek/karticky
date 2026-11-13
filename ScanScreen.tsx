@@ -10,7 +10,10 @@ import ShopPrices from './ShopPrices';
 import type { Pixels, ScanIndex } from './cardHash';
 import { identifyCard, type ScanResult } from './scanIdentify';
 import { loadScanIndex } from './scanIndexLoader';
-import { nativeCardScannerAvailable, scanCardsWithCamera, type ScannedCard } from './modules/card-scanner';
+import {
+  NativeLiveScannerView, liveEventToCard, nativeCardScannerAvailable, scanCardsWithCamera, type ScannedCard,
+} from './modules/card-scanner';
+import { initialLiveState, liveStep, recogniseFrame } from './liveScan';
 import { CardRow, SmallButton, color, s } from './ui';
 
 export const LANGUAGE_NAMES: Record<string, string> = {
@@ -88,6 +91,17 @@ export default function ScanScreen({ decks, onCreateDeck, onAdd }: Props) {
     }
   };
 
+  // Live: every camera frame goes here; a card is read once it is recognised in a row.
+  const live = useRef(initialLiveState());
+  const [seeing, setSeeing] = useState(false);
+  const onLiveFrame = useCallback((card: ScannedCard | null) => {
+    const { key, strength } = recogniseFrame(card ?? {}, index);
+    const step = liveStep(live.current, key, strength, Date.now());
+    live.current = step.state;
+    setSeeing(Boolean(card) && strength !== 'low');
+    if (step.accept && card) void recognise([card]);
+  }, [index, recognise]);
+
   const found = items.filter(item => item.state === 'done' && item.result?.status === 'found' && !item.added);
   const add = (item: Item, where: AddTarget) => {
     const card = chosenCard(item);
@@ -105,15 +119,38 @@ export default function ScanScreen({ decks, onCreateDeck, onAdd }: Props) {
         <Text style={[s.rowTitle, s.grow]}>Skenuješ {targetName(target, decks)}</Text>
         <Pressable onPress={() => setTarget(null)}><Text style={s.link}>Změnit</Text></Pressable>
       </View>
-      <Text style={s.muted}>
-        Karta se pozná podle ilustrace, ta je stejná ve všech jazycích. Jazyk se vezme z drobného textu vlevo dole
-        nebo z písma na kartě; když není nic čitelné, použije se tvůj obvyklý jazyk.
-      </Text>
+      {Platform.OS === 'web' ? (
+        <WebCamera onFrame={onLiveFrame} onCapture={card => void recognise([{ image: card, text: '' }])} seeing={seeing} />
+      ) : NativeLiveScannerView ? (
+        <View style={{ gap: 8 }}>
+          <View style={[s.camera, { aspectRatio: 3 / 4 }]}>
+            <NativeLiveScannerView
+              style={{ flex: 1 }}
+              active
+              onCard={event => {
+                const card = liveEventToCard(event);
+                if (card === 'denied') setError('Kartičky nemají přístup k fotoaparátu. Povol ho v Nastavení → Kartičky.');
+                else onLiveFrame(card);
+              }}
+            />
+            <LiveHint seeing={seeing} />
+          </View>
+          {nativeCardScannerAvailable && <SmallButton label="Vyfotit celou hromádku" onPress={() => void scanNative()} />}
+        </View>
+      ) : nativeCardScannerAvailable ? (
+        <Pressable style={s.primaryButton} onPress={() => void scanNative()}>
+          <Text style={s.primaryButtonText}>Skenovat karty</Text>
+        </Pressable>
+      ) : (
+        <Text style={s.muted}>Skenování potřebuje novější verzi aplikace z TestFlightu.</Text>
+      )}
       {index === undefined && <Text style={s.muted}>Načítám index karet…</Text>}
       {index === null && (
         <View style={s.notice}>
           <Text style={s.rowTitle}>Index karet teď není k dispozici</Text>
-          <Text style={s.muted}>Poznají se jen karty s čitelným číslem a edicí vlevo dole (karty od roku 2020).</Text>
+          <Text style={s.muted}>{Platform.OS === 'web'
+            ? 'Bez něj web karty nepozná. Index se právě připravuje, zkus to později.'
+            : 'Poznají se jen karty s čitelným číslem a edicí vlevo dole (karty od roku 2020).'}</Text>
         </View>
       )}
 
@@ -123,19 +160,10 @@ export default function ScanScreen({ decks, onCreateDeck, onAdd }: Props) {
           <Chip key={lang} label={LANGUAGE_NAMES[lang]} active={language === lang} onPress={() => chooseLanguage(lang)} />
         ))}
       </View>
-
-      {Platform.OS === 'web' ? (
-        <WebCamera onCapture={card => void recognise([{ image: card, text: '' }])} />
-      ) : nativeCardScannerAvailable ? (
-        <Pressable style={s.primaryButton} onPress={() => void scanNative()}>
-          <Text style={s.primaryButtonText}>Skenovat karty</Text>
-        </Pressable>
-      ) : (
-        <Text style={s.muted}>Skenování potřebuje novější verzi aplikace z TestFlightu.</Text>
-      )}
-      {Platform.OS !== 'web' && nativeCardScannerAvailable && (
-        <Text style={s.footnote}>Polož kartu na tmavou podložku. Můžeš vyfotit víc karet za sebou, pak klepni na Uložit.</Text>
-      )}
+      <Text style={s.footnote}>
+        Karta se pozná podle ilustrace, ta je stejná ve všech jazycích. Jazyk se vezme z drobného textu vlevo dole
+        nebo z písma na kartě; když není nic čitelné, použije se tvůj obvyklý jazyk.
+      </Text>
       {!!error && <Text style={s.error}>{error}</Text>}
 
       {found.length > 1 && target.kind !== 'look' && (
@@ -334,7 +362,15 @@ const toCardPixels = (source: CanvasImageSource, area: { x: number; y: number; w
   return { width: CARD_WIDTH, height: CARD_HEIGHT, data: context.getImageData(0, 0, CARD_WIDTH, CARD_HEIGHT).data };
 };
 
-function WebCamera({ onCapture }: { onCapture: (card: Pixels) => void }) {
+function LiveHint({ seeing }: { seeing: boolean }) {
+  return (
+    <View style={s.liveHint} pointerEvents="none">
+      <Text style={s.liveHintText}>{seeing ? 'Vidím kartu, chvilku vydrž…' : 'Namiř fotoaparát na kartu'}</Text>
+    </View>
+  );
+}
+
+function WebCamera({ onCapture, onFrame, seeing }: { onCapture: (card: Pixels) => void; onFrame: (card: ScannedCard | null) => void; seeing: boolean }) {
   const host = useRef<ComponentRef<typeof View>>(null);
   const video = useRef<HTMLVideoElement | null>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -373,6 +409,20 @@ function WebCamera({ onCapture }: { onCapture: (card: Pixels) => void }) {
       element.remove();
     };
   }, []);
+
+  // A few times a second the card in the frame is checked; no button needed.
+  const frameHandler = useRef(onFrame);
+  useEffect(() => { frameHandler.current = onFrame; }, [onFrame]);
+  useEffect(() => {
+    if (state !== 'ready' || !size) return;
+    const timer = setInterval(() => {
+      const element = video.current;
+      if (!element || element.readyState < 2) return;
+      const pixels = toCardPixels(element, cardGuide(size.width, size.height));
+      frameHandler.current(pixels ? { image: pixels, text: '' } : null);
+    }, 450);
+    return () => clearInterval(timer);
+  }, [state, size]);
 
   const capture = () => {
     const element = video.current;
@@ -413,20 +463,21 @@ function WebCamera({ onCapture }: { onCapture: (card: Pixels) => void }) {
         {guide && size && (
           <View
             pointerEvents="none"
-            style={[s.cameraGuide, {
+            style={[s.cameraGuide, seeing && s.cameraGuideSeeing, {
               left: percent(guide.x / size.width), top: percent(guide.y / size.height),
               width: percent(guide.w / size.width), height: percent(guide.h / size.height),
             }]}
           />
         )}
         {state === 'starting' && <ActivityIndicator color="#fff" style={{ marginTop: 40 }} />}
+        {state === 'ready' && <LiveHint seeing={seeing} />}
       </View>
       {state === 'ready' && (
-        <Pressable style={s.primaryButton} onPress={capture}><Text style={s.primaryButtonText}>Vyfotit kartu</Text></Pressable>
+        <SmallButton label="Nepoznává se? Vyfotit" onPress={capture} />
       )}
       {state === 'unavailable' && <Text style={s.muted}>Fotoaparát není dostupný nebo jsi ho nepovolil. Můžeš nahrát fotku.</Text>}
       <SmallButton label="Nahrát fotku karty" onPress={upload} />
-      <Text style={[s.footnote, { color: color.muted }]}>Kartu dej celou do rámečku, bez odlesků. Japonské, čínské i korejské karty se poznají stejně.</Text>
+      <Text style={[s.footnote, { color: color.muted }]}>Stačí kartu podržet v rámečku, načte se sama. Pak další. Japonské, čínské i korejské karty se poznají stejně.</Text>
     </View>
   );
 }

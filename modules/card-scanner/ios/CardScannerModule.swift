@@ -40,6 +40,13 @@ public final class CardScannerModule: Module {
       currentViewController.present(camera, animated: true)
     }
     .runOnQueue(.main)
+
+    View(CardLiveScannerView.self) {
+      Events("onCard")
+      Prop("active") { (view: CardLiveScannerView, active: Bool) in
+        view.setActive(active)
+      }
+    }
   }
 
   static func describe(_ original: UIImage, width: Int, height: Int) -> [String: Any] {
