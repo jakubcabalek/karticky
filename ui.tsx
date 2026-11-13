@@ -98,7 +98,7 @@ export const s = StyleSheet.create({
   switchThumbOn: { transform: [{ translateX: 18 }] },
   tabBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: color.line, backgroundColor: color.card, paddingTop: 8 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  tabText: { color: color.muted, fontWeight: '600', fontSize: 13 },
+  tabText: { color: color.muted, fontWeight: '600', fontSize: 12 },
   tabTextActive: { color: color.accent, fontWeight: '800' },
   backdrop: { flex: 1, backgroundColor: 'rgba(20,12,40,0.45)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: color.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, gap: 8, maxWidth: 720, width: '100%', alignSelf: 'center' },

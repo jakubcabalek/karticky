@@ -10,6 +10,7 @@ import { searchCards } from './scryfall';
 import ScanScreen from './ScanScreen';
 import ShopPrices from './ShopPrices';
 import CardExplain from './CardExplain';
+import LifeScreen from './LifeScreen';
 import { CardRow, EntryCard, SmallButton, SwitchRow, s } from './ui';
 import {
   addCard, copiesOf, createDeck, deleteDeck, emptyLibrary, formatPrice, listValue, markWishAcquired,
@@ -17,13 +18,14 @@ import {
   type CardEntry, type CardPrinting, type DeckBoard, type Library,
 } from './cardData';
 
-type Tab = 'scan' | 'search' | 'collection' | 'decks' | 'wishlist' | 'profile';
+type Tab = 'scan' | 'search' | 'collection' | 'decks' | 'wishlist' | 'life' | 'profile';
 const allTabs: { key: Tab; label: string }[] = [
   { key: 'scan', label: 'Skenovat' },
   { key: 'search', label: 'Hledat' },
   { key: 'collection', label: 'Sbírka' },
   { key: 'decks', label: 'Balíčky' },
   { key: 'wishlist', label: 'Wishlist' },
+  { key: 'life', label: 'Životy' },
   { key: 'profile', label: 'Profil' },
 ];
 
@@ -125,6 +127,7 @@ export default function App() {
                 change={change}
               />
             )}
+            {tab === 'life' && <LifeScreen />}
             {tab === 'profile' && (
               <ProfileScreen
                 library={library}
