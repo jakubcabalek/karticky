@@ -31,6 +31,11 @@
       "output": "single",
       "favicon": "./public/icon-192.png"
     },
-    "owner": "jcabalek"
+    "owner": "jcabalek",
+    "extra": {
+      "eas": {
+        "projectId": "fb82a77e-e221-4833-aed5-76083a071c3f"
+      }
+    }
   }
 }
