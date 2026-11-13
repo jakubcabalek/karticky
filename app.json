@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Kartičky",
+    "name": "Karticky",
     "slug": "karticky",
     "scheme": "karticky",
     "version": "0.1.0",
@@ -17,7 +17,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Fotoaparát slouží ke skenování karet do sbírky."
+        "NSCameraUsageDescription": "Fotoaparát slouží ke skenování karet do sbírky.",
+        "CFBundleDisplayName": "Kartičky"
       }
     },
     "android": {
@@ -31,6 +32,11 @@
       "output": "single",
       "favicon": "./public/icon-192.png"
     },
-    "owner": "jcabalek"
+    "owner": "jcabalek",
+    "extra": {
+      "eas": {
+        "projectId": "fb82a77e-e221-4833-aed5-76083a071c3f"
+      }
+    }
   }
 }
