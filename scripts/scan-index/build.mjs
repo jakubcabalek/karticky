@@ -29,15 +29,29 @@ if (previousPath) {
 
 // The list of bulk files; "unique_artwork" is one card per unique artwork.
 const bulkList = await json('https://api.scryfall.com/bulk-data');
-const bulk = (bulkList.data ?? []).find(item => item.type === 'unique_artwork');
-if (!bulk?.download_uri) throw new Error(`Scryfall bulk data "unique_artwork" not found: ${JSON.stringify(bulkList).slice(0, 300)}`);
+// Prefer the file with one card per artwork; otherwise take all English printings
+// ("default_cards") and keep one per artwork below.
+const files = bulkList.data ?? [];
+console.log(`Bulk files: ${files.map(item => item.type).join(', ')}`);
+const bulk = files.find(item => /artwork/.test(item.type)) ?? files.find(item => item.type === 'default_cards');
+if (!bulk?.download_uri) throw new Error('Scryfall has neither unique artwork nor default cards bulk data.');
 console.log(`Scryfall unique artwork from ${bulk.updated_at}`);
 const cards = await json(bulk.download_uri);
 
 const wanted = [];
+const seenArtwork = new Set();
 for (const card of cards) {
-  const faces = card.image_uris ? [card.image_uris] : (card.card_faces ?? []).map(face => face.image_uris);
-  faces.forEach((images, face) => { if (images?.art_crop) wanted.push({ id: card.id, face, url: images.art_crop }); });
+  const faces = card.image_uris
+    ? [{ images: card.image_uris, illustration: card.illustration_id }]
+    : (card.card_faces ?? []).map(face => ({ images: face.image_uris, illustration: face.illustration_id }));
+  faces.forEach(({ images, illustration }, face) => {
+    if (!images?.art_crop) return;
+    // One entry per artwork (and frame-independent: the art crop is the painting only).
+    const key = illustration ?? `${card.id}:${face}`;
+    if (seenArtwork.has(key)) return;
+    seenArtwork.add(key);
+    wanted.push({ id: card.id, face, url: images.art_crop });
+  });
 }
 console.log(`${cards.length} cards, ${wanted.length} artworks to index`);
 
