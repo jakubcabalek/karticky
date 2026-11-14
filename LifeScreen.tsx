@@ -2,7 +2,7 @@
 // upper half of the panels is turned upside down. Tap the left half for −1, the
 // right half for +1, hold for −10/+10. The name opens poison, commander damage and
 // other counters. The game is saved, so switching apps loses nothing.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -12,17 +12,19 @@ import {
   type CounterKind, type Game, type Player, type PlayerColor,
 } from './lifeCounter';
 import { SmallButton, s } from './ui';
+import CardFrame, { MenuContext } from './cardFrame';
+import { FRAMES, fonts, ink, type FrameColor } from './theme';
 
 const storageKey = 'karticky-life-game-v1';
 
-const PANEL: Record<PlayerColor, { bg: string; fg: string; name: string }> = {
-  blue: { bg: '#2F5DA8', fg: '#FFFFFF', name: 'Modrá' },
-  red: { bg: '#B23A3A', fg: '#FFFFFF', name: 'Červená' },
-  green: { bg: '#2E7D4F', fg: '#FFFFFF', name: 'Zelená' },
-  black: { bg: '#2B2B33', fg: '#FFFFFF', name: 'Černá' },
-  white: { bg: '#E6DFCC', fg: '#2A2418', name: 'Bílá' },
-  gold: { bg: '#B88A1E', fg: '#FFFFFF', name: 'Zlatá' },
-};
+// Each player is a card in the frame colour of their mana.
+const FRAME_OF: Record<PlayerColor, FrameColor> = { white: 'W', blue: 'U', black: 'B', red: 'R', green: 'G', gold: 'M' };
+const PANEL: Record<PlayerColor, { bg: string; fg: string; name: string }> = Object.fromEntries(
+  (Object.keys(FRAME_OF) as PlayerColor[]).map(key => {
+    const frame = FRAMES[FRAME_OF[key]];
+    return [key, { bg: frame.base, fg: frame.text, name: ({ white: 'Bílá', blue: 'Modrá', black: 'Černá', red: 'Červená', green: 'Zelená', gold: 'Zlatá' })[key] }];
+  }),
+) as Record<PlayerColor, { bg: string; fg: string; name: string }>;
 
 /** How many panels go in each row, top to bottom. */
 export const rowsFor = (count: number): number[] =>
@@ -36,6 +38,7 @@ export default function LifeScreen() {
   const [message, setMessage] = useState<string | null>(null);
   // The clock for the "−3" bubbles; it moves on with every tap and once more when the bubble should go.
   const [now, setNow] = useState(() => Date.now());
+  const { openMenu } = useContext(MenuContext);
   const tickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -97,6 +100,7 @@ export default function LifeScreen() {
       </View>
 
       <View style={life.tools}>
+        {openMenu && <ToolButton label="☰ Ruka" onPress={openMenu} />}
         <ToolButton label="Zpět" disabled={!game.history.length} onPress={() => play(undo)} />
         <ToolButton label="d6" onPress={() => setMessage(`Kostka d6: ${rollDie(6)}`)} />
         <ToolButton label="d20" onPress={() => setMessage(`Kostka d20: ${rollDie(20)}`)} />
@@ -134,11 +138,12 @@ function LifePanel({ game, player, upsideDown, delta, onLife, onOpen }: {
   onOpen: () => void;
 }) {
   const colors = PANEL[player.color];
+  const frame = FRAMES[FRAME_OF[player.color]];
   const out = defeat(game, player);
   const commanderTaken = Object.entries(player.commanderDamage).filter(([, damage]) => damage > 0);
   const counters = COUNTERS.filter(counter => player.counters[counter.kind] > 0);
   return (
-    <View style={[life.panel, { backgroundColor: colors.bg }, upsideDown && life.upsideDown, out.out && life.out]}>
+    <View style={[life.panel, { backgroundColor: colors.bg, borderTopColor: frame.light, borderLeftColor: frame.light, borderBottomColor: frame.dark, borderRightColor: frame.dark }, upsideDown && life.upsideDown, out.out && life.out]}>
       <View style={life.halves}>
         <Pressable accessibilityLabel={`${player.name} −1 život`} style={life.half} onPress={() => onLife(-1)} onLongPress={() => onLife(-10)}>
           <Text style={[life.sign, { color: colors.fg }]}>−</Text>
@@ -149,7 +154,7 @@ function LifePanel({ game, player, upsideDown, delta, onLife, onOpen }: {
       </View>
       <View style={life.center} pointerEvents="box-none">
         <Pressable onPress={onOpen} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${player.name}: jed, commander damage a další`}>
-          <Text style={[life.name, { color: colors.fg }]}>{player.name} ⋯</Text>
+          <Text style={[life.name, { color: frame.ink, backgroundColor: frame.bar, borderColor: frame.barEdge }]}>{player.name} ⋯</Text>
         </Pressable>
         <View style={life.info} pointerEvents="none">
           <Text style={[life.total, { color: colors.fg }]} accessibilityLiveRegion="polite">{player.life}</Text>
@@ -258,9 +263,8 @@ function GameSetup({ previous, onStart, onCancel }: { previous: Game | null; onS
   };
 
   return (
+    <CardFrame color="R" name="Životy" typeLine="Instant — Souboj" collector="KRT · 006/007" stat={`${players} · ${startingLife}`} scroll={false}>
     <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
-      <Text style={s.title}>Počítání životů</Text>
-
       <Text style={s.sectionTitle}>Počet hráčů</Text>
       <View style={s.actions}>
         {[1, 2, 3, 4, 5, 6].map(count => <Choice key={count} label={String(count)} active={players === count} onPress={() => setPlayers(count)} />)}
@@ -307,6 +311,7 @@ function GameSetup({ previous, onStart, onCancel }: { previous: Game | null; onS
       </Pressable>
       {onCancel && <SmallButton label="Zpět do rozehrané hry" onPress={onCancel} />}
     </ScrollView>
+    </CardFrame>
   );
 }
 
@@ -327,10 +332,10 @@ function ToolButton({ label, onPress, disabled }: { label: string; onPress: () =
 }
 
 const life = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#111014' },
+  screen: { flex: 1, backgroundColor: ink.table },
   table: { flex: 1, padding: 4, gap: 4 },
   row: { flex: 1, flexDirection: 'row', gap: 4 },
-  panel: { flex: 1, borderRadius: 18, overflow: 'hidden' },
+  panel: { flex: 1, borderRadius: 16, borderWidth: 3, overflow: 'hidden' },
   upsideDown: { transform: [{ rotate: '180deg' }] },
   out: { opacity: 0.45 },
   halves: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, flexDirection: 'row' },
@@ -338,27 +343,27 @@ const life = StyleSheet.create({
   halfRight: { alignItems: 'flex-end' },
   sign: { fontSize: 34, fontWeight: '300', opacity: 0.5 },
   center: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  name: { fontSize: 16, fontWeight: '700', opacity: 0.9, paddingHorizontal: 10, paddingVertical: 4 },
-  total: { fontSize: 72, fontWeight: '800', fontVariant: ['tabular-nums'], lineHeight: 80 },
+  name: { fontFamily: fonts.title, fontSize: 16, fontWeight: '700', paddingHorizontal: 14, paddingVertical: 4, borderWidth: 1.5, borderBottomWidth: 3, borderRadius: 12, overflow: 'hidden' },
+  total: { fontFamily: fonts.title, fontSize: 76, fontWeight: '700', fontVariant: ['tabular-nums'], lineHeight: 80 },
   info: { alignItems: 'center', gap: 2 },
   delta: { fontSize: 20, fontWeight: '800', opacity: 0.85 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, paddingHorizontal: 8 },
   badge: { fontSize: 12, fontWeight: '700', borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   outText: { fontSize: 14, fontWeight: '800' },
   winnerBanner: { position: 'absolute', left: 16, right: 16, top: '45%', backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: 16, padding: 14, alignItems: 'center' },
-  winnerText: { color: '#F6D478', fontSize: 22, fontWeight: '800' },
+  winnerText: { fontFamily: fonts.title, color: ink.brassLight, fontSize: 24, fontWeight: '700' },
   tools: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, padding: 6 },
-  tool: { backgroundColor: '#2A2733', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
+  tool: { backgroundColor: ink.leather, borderColor: ink.brass, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
   toolDisabled: { opacity: 0.4 },
-  toolText: { color: '#F2F0F7', fontWeight: '700', fontSize: 13 },
+  toolText: { fontFamily: fonts.title, color: ink.brassLight, fontWeight: '700', fontSize: 14 },
   messageBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  messageBox: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 28, paddingHorizontal: 36 },
-  messageText: { fontSize: 26, fontWeight: '800', color: '#1C1530', textAlign: 'center' },
+  messageBox: { backgroundColor: ink.parchment, borderColor: ink.brass, borderWidth: 3, borderRadius: 20, paddingVertical: 28, paddingHorizontal: 36 },
+  messageText: { fontFamily: fonts.title, fontSize: 26, fontWeight: '700', color: ink.text, textAlign: 'center' },
   sheet: { maxHeight: '85%' },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepValue: { minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: '800', color: '#1C1530' },
+  stepValue: { minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: '800', color: ink.text },
   swatch: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: 'transparent' },
-  swatchActive: { borderColor: '#1C1530', borderWidth: 3 },
+  swatchActive: { borderColor: ink.text, borderWidth: 3 },
   customLife: { width: 80, paddingVertical: 8 },
   choice: { minWidth: 48, alignItems: 'center' },
   choiceText: { fontSize: 16 },

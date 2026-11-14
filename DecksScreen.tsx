@@ -34,7 +34,6 @@ export default function DecksScreen({ library, showPrices, openDeckId, onOpen, c
 
   return (
     <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
-      <Text style={s.title}>Balíčky</Text>
       <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Název nového balíčku" />
       <FormatChips value={format} onChange={setFormat} />
       <SmallButton label="Založit balíček" onPress={() => {

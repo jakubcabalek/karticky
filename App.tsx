@@ -15,7 +15,9 @@ import CardExplain from './CardExplain';
 import LifeScreen from './LifeScreen';
 import Account, { type SyncState } from './Account';
 import { listenForSignInLinks, readCloudLibrary, supabase, writeCloudLibrary, type Session } from './cloud';
-import AppFrame, { type Section } from './nav';
+import AppFrame, { navItem, type Section } from './nav';
+import CardFrame, { ArtImage, ManaCost } from './cardFrame';
+import { frameFor } from './theme';
 import { CardRow, EntryCard, SmallButton, SwitchRow, s } from './ui';
 import {
   addCard, boardChange, copiesOf, createDeck, emptyLibrary, formatPrice, libraryCardIds, listValue, markWishAcquired, mergeLibraries,
@@ -154,7 +156,7 @@ export default function App() {
 
   return (
     <View style={[s.app, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       {isDevelopmentVersion && (
         <View style={s.devBand}><Text style={s.devBandText}>Testovací verze · {appRevision}</Text></View>
       )}
@@ -166,8 +168,8 @@ export default function App() {
           wishlist: alerts ? `${alerts} zlevnilo` : undefined,
         }}
       >
-        {!loaded ? <ActivityIndicator style={s.loading} /> : (
-          <>
+        {!loaded ? <ActivityIndicator style={s.loading} /> : tab === 'life' ? <LifeScreen /> : (
+          <SectionCard section={tab} library={library} openDeckId={tab === 'decks' ? openDeckId : null} onCloseDeck={() => setOpenDeckId(null)}>
             {tab === 'scan' && (
               <ScanScreen
                 decks={library.decks}
@@ -197,7 +199,6 @@ export default function App() {
             )}
             {tab === 'collection' && (
               <EntryListScreen
-                title="Sbírka"
                 empty="Zatím tu nic není. Najdi kartu v Hledat a přidej ji do sbírky."
                 entries={library.collection}
                 showPrices={showPrices}
@@ -223,7 +224,6 @@ export default function App() {
                 change={change}
               />
             )}
-            {tab === 'life' && <LifeScreen />}
             {tab === 'profile' && (
               <ProfileScreen
                 account={<Account session={session} syncState={syncState} externalError={authError} />}
@@ -233,7 +233,7 @@ export default function App() {
                 onSwitchVersion={switchVersion}
               />
             )}
-          </>
+          </SectionCard>
         )}
       </AppFrame>
       <Modal visible={deckPickerCard !== null} transparent animationType="fade" onRequestClose={() => setDeckPickerCard(null)}>
@@ -259,6 +259,65 @@ export default function App() {
         </Pressable>
       </Modal>
     </View>
+  );
+}
+
+/** Every section is a card: its frame colour, name, type line and "power/toughness" numbers. */
+function SectionCard({ section, library, openDeckId, onCloseDeck, children }: {
+  section: Section;
+  library: Library;
+  openDeckId: string | null;
+  onCloseDeck: () => void;
+  children: React.ReactNode;
+}) {
+  const item = navItem(section);
+  const number = String(['scan', 'search', 'collection', 'decks', 'wishlist', 'life', 'profile'].indexOf(section) + 1).padStart(3, '0');
+  const collector = `KRT · ${number}/007`;
+  if (section === 'decks' && openDeckId) {
+    const deck = library.decks.find(d => d.id === openDeckId);
+    if (deck) {
+      const identity = [...new Set(deck.commander.flatMap(entry => entry.card.colorIdentity ?? entry.card.colors ?? []))];
+      const cards = totalCards(deck.commander) + totalCards(deck.main);
+      const goal = deck.format === 'commander' ? 100 : 60;
+      return (
+        <CardFrame
+          color={deck.commander.length ? frameFor(identity) : 'M'}
+          name={deck.name}
+          cost={<ManaCost colors={identity} />}
+          typeLine={`Legendary — ${deck.format === 'commander' ? 'Commander' : 'Balíček'}`}
+          stat={`${cards}/${goal}`}
+          collector={collector}
+          onBack={onCloseDeck}
+          scroll={false}
+        >{children}</CardFrame>
+      );
+    }
+  }
+  let stat: string | undefined;
+  let art: React.ReactNode;
+  if (section === 'collection') {
+    const value = listValue(library.collection, 'eur');
+    stat = library.collection.length ? `${totalCards(library.collection)} · ${formatPrice(value.total, 'eur')}` : '0';
+    const top = [...library.collection].sort((a, b) => (b.card.prices.eur ?? 0) - (a.card.prices.eur ?? 0)).slice(0, 3);
+    art = top.length ? (
+      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: '#2A2016' }}>
+        {top.map((entry, i) => (
+          <View key={entry.key} style={{ width: 86, height: 120, marginHorizontal: -12, borderRadius: 5, overflow: 'hidden', transform: [{ rotate: `${(i - (top.length - 1) / 2) * 10}deg` }, { translateY: i === 1 ? -6 : 4 }] }}>
+            <ArtImage uri={entry.card.imageSmall} />
+          </View>
+        ))}
+      </View>
+    ) : undefined;
+  }
+  if (section === 'decks') stat = String(library.decks.length);
+  if (section === 'wishlist') {
+    const cheaper = priceAlerts(library.wishlist).length;
+    stat = cheaper ? `${totalCards(library.wishlist)} · ↓${cheaper}` : String(totalCards(library.wishlist));
+  }
+  return (
+    <CardFrame color={item.color} name={item.label} typeLine={item.type} stat={stat} collector={collector} art={art} artHeight={150} scroll={false}>
+      {children}
+    </CardFrame>
   );
 }
 
@@ -289,7 +348,6 @@ function SearchScreen({ library, showPrices, showShopPrices, onAdd, onAddToDeck 
 
   return (
     <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
-      <Text style={s.title}>Hledat kartu</Text>
       <TextInput
         style={s.input}
         value={query}
@@ -322,8 +380,7 @@ function SearchScreen({ library, showPrices, showShopPrices, onAdd, onAddToDeck 
   );
 }
 
-function EntryListScreen({ title, empty, entries, showPrices, onQuantity, action }: {
-  title: string;
+function EntryListScreen({ empty, entries, showPrices, onQuantity, action }: {
   empty: string;
   entries: CardEntry[];
   showPrices: boolean;
@@ -333,7 +390,6 @@ function EntryListScreen({ title, empty, entries, showPrices, onQuantity, action
   const value = useMemo(() => listValue(entries, 'eur'), [entries]);
   return (
     <ScrollView contentContainerStyle={s.screen}>
-      <Text style={s.title}>{title}</Text>
       <Text style={s.muted}>
         {totalCards(entries)} karet
         {showPrices && entries.length > 0 ? ` · hodnota ${formatPrice(value.total, 'eur')}${value.unpriced ? ` (${value.unpriced} bez ceny)` : ''}` : ''}
@@ -355,7 +411,6 @@ function ProfileScreen({ account, library, features, onFeatures, onSwitchVersion
 }) {
   return (
     <ScrollView contentContainerStyle={s.screen}>
-      <Text style={s.title}>Profil</Text>
       <Text style={s.muted}>Sbírka {totalCards(library.collection)} karet · Wishlist {totalCards(library.wishlist)} · Balíčků {library.decks.length}</Text>
       {account}
       {isDevelopmentVersion && (

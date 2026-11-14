@@ -114,7 +114,6 @@ export default function ScanScreen({ decks, onCreateDeck, onAdd }: Props) {
 
   return (
     <ScrollView contentContainerStyle={s.screen}>
-      <Text style={s.title}>Skenovat</Text>
       <View style={s.targetBar}>
         <Text style={[s.rowTitle, s.grow]}>Skenuješ {targetName(target, decks)}</Text>
         <Pressable onPress={() => setTarget(null)}><Text style={s.link}>Změnit</Text></Pressable>
@@ -292,7 +291,6 @@ function TargetChooser({ decks, onCreateDeck, onChoose }: { decks: Deck[]; onCre
   ];
   return (
     <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
-      <Text style={s.title}>Skenovat</Text>
       <Text style={s.muted}>Kam s kartami, které teď naskenuješ?</Text>
       {options.slice(0, 2).map(option => (
         <Pressable key={option.kind} accessibilityRole="button" style={s.targetOption} onPress={() => onChoose({ kind: option.kind })}>
