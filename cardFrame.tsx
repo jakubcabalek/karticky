@@ -131,8 +131,8 @@ export default function CardFrame({ color, name, cost, art, artHeight = 220, typ
 export function ArtImage({ uri, fallback = '#3A2C1C' }: { uri?: string; fallback?: string }) {
   const source: ImageSourcePropType | undefined = uri ? { uri } : undefined;
   return source
-    ? <Image source={source} style={StyleSheet.absoluteFillObject} resizeMode="cover" accessibilityIgnoresInvertColors />
-    : <View style={[StyleSheet.absoluteFillObject, { backgroundColor: fallback }]} />;
+    ? <Image source={source} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+    : <View style={[StyleSheet.absoluteFill, { backgroundColor: fallback }]} />;
 }
 
 /** A small card for fans and hands: frame colour, name bar, picture, type and text. */
