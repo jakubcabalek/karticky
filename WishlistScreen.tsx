@@ -23,7 +23,6 @@ export default function WishlistScreen({ entries, showPrices, pricesUpdatedAt, o
 
   return (
     <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
-      <Text style={s.title}>Wishlist</Text>
       <Text style={s.muted}>
         {totalCards(entries)} karet{showPrices && entries.length > 0 ? ` · celkem ${formatPrice(value.total, 'eur')}` : ''}
         {pricesUpdatedAt ? ` · ceny z ${new Date(pricesUpdatedAt).toLocaleDateString('cs-CZ')}` : ''}
