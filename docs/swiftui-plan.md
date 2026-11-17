@@ -80,13 +80,17 @@ Každá fáze je jeden nebo víc PR do `main` (větve `codex/swift-<téma>` nebo
 
 0. **Kostra** – hotová v tomto PR: `project.yml`, `KartickyCore` s `JSONValue` a testem fixture, `KartickyUI/Theme.swift`, prázdná aplikace, skripty `swift-check.sh` a `testflight.sh`, workflow na Macu. Úkol pro Mac: `xcodegen generate`, build v simulátoru, opravit, co v kostře nejde přeložit (psáno bez Xcode).
 1. **Navigace a komponenty** – `TabView` (Sbírka, Balíčky, Wishlist, Životy + tlačítko Skenovat), `CardImage`, `FoilShine`, `ManaDots`, `PriceText`, `ColorIdentityGradient`, barvy a akcent. Náhledy a snapshoty s mock daty, bez sítě.
-2. **Knihovna offline** – modely a `normalizeLibrary`, `LocalStore`, `AppModel`, hledání ve Sbírce (Scryfall), Detail karty (obrázek, ceny Scryfall + e-shopy, „Co karta umí“), Sbírka, Wishlist (cílová cena, zlevnilo), denní obnova cen.
-3. **Balíčky** – seznam, detail s commanderem, statistiky (křivka, typy, barvy), legalita, import a export textu, chybějící karty do wishlistu.
-4. **Skenování** – živá kamera, rozpoznání (index + OCR + jazyky), volba cíle (sbírka / wishlist / balíček / jen ceny), foil, série karet za sebou.
-5. **Životy** – celé počítadlo (panely v barvách many, otočená horní polovina, jed, commander damage, žetony, kostky, zpět), uložení hry, obrazovka nezhasíná (`isIdleTimerDisabled`).
-6. **Účet a převod** – přihlášení, synchronizace, převzetí dat z Expo aplikace, Profil, porovnání s Expo aplikací obrazovku po obrazovce, první Swift build do TestFlightu.
+2. **Knihovna offline** – modely a `normalizeLibrary`, `LocalStore`, `AppModel`, hledání ve Sbírce (Scryfall) **s filtry** (barva, typ, edice, mana, cena, foil), Detail karty (obrázek, ceny Scryfall + e-shopy v Kč, „Co karta umí“, **rulings ze Scryfallu**), Sbírka, Wishlist (cílová cena, zlevnilo), denní obnova cen.
+3. **Šanony a import/export** – sbírka rozdělená do šanonů a seznamů („Šanon“, „Na výměnu“, „Bulk“…), přesun karet mezi nimi, hodnota po šanonech. **Import sbírky z CSV** (ManaBox, Moxfield, Dragon Shield, Delver Lens, Archidekt; náhled před zápisem) a **export do CSV** (stejné formáty + záloha). Bez tohohle si appku nikdo se stovkami karet nevybere.
+4. **Balíčky** – seznam, detail s commanderem, statistiky (křivka, typy, barvy), legalita, import a export textu, chybějící karty do wishlistu, **zkušební ruka** (7 karet, mulligan, líznutí).
+5. **Skenování** – živá kamera, rozpoznání (index + OCR + jazyky), volba cíle (sbírka / šanon / wishlist / balíček / jen ceny), foil, série karet za sebou, **součet hodnoty dávky, zamčení edice, hromadná oprava, dávka přežije zavření appky**.
+6. **Životy** – celé počítadlo (panely v barvách many, otočená horní polovina, jed, commander damage, žetony, kostky, zpět), uložení hry, obrazovka nezhasíná (`isIdleTimerDisabled`).
+7. **Účet a převod** – přihlášení, synchronizace, převzetí dat z Expo aplikace, Profil, porovnání s Expo aplikací obrazovku po obrazovce, první Swift build do TestFlightu.
+8. **Po prvním buildu** (podle konkurence: ManaBox, Dragon Shield, Delver Lens) – doporučení z EDHREC k commanderovi, nástroj na výměnu (porovnání hodnoty dvou hromádek), vývoj hodnoty sbírky v čase + widget, stav karty (NM/LP…) a jazyk u kusu, sdílení balíčku odkazem.
 
-Build do TestFlightu jde udělat po kterékoli fázi (`scripts/testflight.sh`), ale nahradí Expo aplikaci u testerů. Proto první Swift build až po fázi 2 a s převzetím dat (část fáze 6 se udělá dřív).
+Nová pole v datech (šanon, stav karty …) jsou volitelná a TypeScript je nezná. Proto: zapisuje je jen Swift, Expo aplikace a web po prvním Swift buildu do synchronizace nezapisují (web je zmrazený, Expo aplikaci nahradí Swift), a pole se popíšou v tomto souboru u fáze, která je přidává.
+
+Build do TestFlightu jde udělat po kterékoli fázi (`scripts/testflight.sh`), ale nahradí Expo aplikaci u testerů. Proto první Swift build až po fázi 3 a s převzetím dat (část fáze 7 se udělá dřív).
 
 ## 7. Co se nedělá (zatím)
 

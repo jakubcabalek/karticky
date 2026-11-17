@@ -92,4 +92,5 @@ The iPhone app is being rewritten in SwiftUI, the same way as Fakturo. Plan: `do
 - **User-facing copy in `Localizable.xcstrings`** (Czech).
 - **Check Swift with `scripts/swift-check.sh`** (`--fast` while working, full before a PR, `--record` for snapshots). Do not read whole logs unless the script output is not enough.
 - **TestFlight builds go through `scripts/testflight.sh`** (the owner can run it himself, see `docs/lokalne.md`). Swift build numbers start at 100. The first Swift build replaces the Expo app for testers, so it waits until the library, scanning basics and the data takeover from the Expo app work (plan, section 6).
+- **`docs/STAV.md` is the shared memory**: read it at the start of a session, write your row into "Teď rozpracované" at the first commit, update the queue at the end. Push after every working step.
 - On the Mac each agent works in its own worktree (`git -C ~/karticky worktree add ~/karticky-codex origin/main`); `~/karticky` stays clean on `main` for builds.
