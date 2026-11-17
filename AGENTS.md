@@ -1,4 +1,4 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+This repository holds the Expo/React Native app (today's TestFlight build, frozen web) and its replacement, a SwiftUI iPhone app in `swift/` (see "SwiftUI app" below). New features go to the Swift app; the Expo app only gets fixes until Swift replaces it.
 
 ## Expo has changed — do not trust your training data
 
@@ -63,7 +63,8 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Kartičky release tracking
 
-- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI) and is deployed to karticky-9w4.pages.dev. No feature switches, no separate test release. `dev` is kept equal to `main`.
+- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI). No feature switches, no separate test release. `dev` is kept equal to `main`.
+- **iPhone only (owner, 17. 11. 2026).** The web at karticky-9w4.pages.dev is frozen: no new features there. Cloudflare Pages keeps deploying because the Swift app calls `functions/api/` (shop prices).
 - When the owner starts sharing the app, switch to the Fakturo way: new features to `dev` (dev.karticky-9w4.pages.dev) behind switches in `devFeatures.ts`, released to `main` only when the owner says so. Until then `developmentFeatures` stays empty.
 - After every deploy (web or an iPhone build), update the owner's status page "Kartičky – kde co běží" (claude.ai artifact 8gEqQT18Jz9rGXyZRV3Yyr): what changed, where it is now, and the date.
 
@@ -78,3 +79,17 @@ Claude (in the cloud) and Codex (on the owner's Mac) both work on Kartičky. Git
 - **One agent per area at a time.** Before starting, check open pull requests (`gh pr list`); if the other agent has one touching the same files, wait or build on top of it.
 - **The PR description says what changed for the user**, in Czech. Claude keeps the status page up to date from it; Codex does not need to.
 - **`~/karticky` on the Mac is for builds.** It stays on `main`, clean, and is refreshed before every build with `git checkout -- package.json package-lock.json && git pull`.
+
+## SwiftUI app (`swift/`)
+
+The iPhone app is being rewritten in SwiftUI, the same way as Fakturo. Plan: `docs/swiftui-plan.md`, look: `docs/swiftui-design.md` (both in Czech). Read them before touching `swift/`.
+
+- **Swift is written by an agent with Xcode** (Codex or Claude Code on the Mac) and reviewed by another one. Claude in the cloud has no Xcode: it plans, keeps the fixtures, ports logic only into `KartickyCore` (checked by the Mac run) and reviews.
+- **The data format does not change.** Same `Library` JSON as `cardData.ts`, same `library_data` table; unknown fields survive a round trip.
+- **TypeScript stays the source of truth for logic** until the Swift app replaces the Expo one. A change to a ported module regenerates the fixtures (`node scripts/swift-fixtures.cjs`) in the same pull request; CI checks it (`--check`).
+- **`KartickyCore` is Foundation only**, tested with `swift test`; every ported function gets a line in `Fixtures.ports` so the TypeScript cases run against it.
+- **Reuse `KartickyUI`** (frames, mana, mini cards, hand menu, buttons); screens do not draw their own frames. Dark appearance only; Dynamic Type through accessibility3.
+- **User-facing copy in `Localizable.xcstrings`** (Czech).
+- **Check Swift with `scripts/swift-check.sh`** (`--fast` while working, full before a PR, `--record` for snapshots). Do not read whole logs unless the script output is not enough.
+- **TestFlight builds go through `scripts/testflight.sh`** (the owner can run it himself, see `docs/lokalne.md`). Swift build numbers start at 100. The first Swift build replaces the Expo app for testers, so it waits until the library, scanning basics and the data takeover from the Expo app work (plan, section 6).
+- On the Mac each agent works in its own worktree (`git -C ~/karticky worktree add ~/karticky-codex origin/main`); `~/karticky` stays clean on `main` for builds.

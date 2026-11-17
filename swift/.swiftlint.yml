@@ -1,0 +1,26 @@
+opt_in_rules:
+  - class_delegate_protocol
+  - empty_enum_arguments
+  - force_unwrapping
+  - overridden_super_call
+  - superfluous_disable_command
+
+disabled_rules:
+  - identifier_name
+  - file_length
+  - trailing_whitespace
+  # SwiftLint 0.59.1 treats a submodule import as a duplicate of its parent.
+  - duplicate_imports
+
+included:
+  - Karticky
+  - KartickyUI
+  - KartickyTests
+
+excluded:
+  - KartickyTests/__Snapshots__
+
+force_cast: warning
+line_length:
+  warning: 140
+  error: 180

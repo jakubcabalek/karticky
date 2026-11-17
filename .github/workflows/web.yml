@@ -33,6 +33,8 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
+      - name: Testovací data pro Swift odpovídají TypeScriptu
+        run: node scripts/swift-fixtures.cjs --check
       # The artwork index for scanning comes from the "Scan index" workflow.
       - run: gh release download scan-index -p scan-index-v1.bin -D public || echo "Index karet zatím není, skenování podle obrázku nepůjde."
         env:

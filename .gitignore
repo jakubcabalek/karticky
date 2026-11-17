@@ -52,3 +52,11 @@ public/scan-index-v1.bin
 scan-index-v1.bin
 previous/
 scripts/scan-index/node_modules/
+
+# SwiftUI app (docs/swiftui-plan.md)
+swift/Karticky.xcodeproj/
+swift/**/.build/
+swift/build/
+xcuserdata/
+swift/Config/Secrets.xcconfig
+swift/Karticky/Resources/scan-index-v1.bin

@@ -1,0 +1,106 @@
+# XcodeGen: `xcodegen generate` ve složce swift/ vytvoří Karticky.xcodeproj (necommituje se).
+# Plán: docs/swiftui-plan.md, vzhled: docs/swiftui-design.md.
+name: Karticky
+options:
+  deploymentTarget:
+    iOS: '18.0'
+  developmentLanguage: cs
+configs:
+  Debug: debug
+  Release: release
+configFiles:
+  Debug: Config/Production.xcconfig
+  Release: Config/Production.xcconfig
+settings:
+  base:
+    MARKETING_VERSION: '0.2.0'
+    # Expo (EAS) buildy skončily na 3; Swift buildy začínají od 100, ať se to nemíchá.
+    CURRENT_PROJECT_VERSION: '100'
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    exactVersion: 2.55.6
+  KartickyCore:
+    path: KartickyCore
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing.git
+    exactVersion: 1.19.7
+targets:
+  KartickyUI:
+    type: framework
+    platform: iOS
+    sources:
+      - KartickyUI
+    dependencies:
+      - package: KartickyCore
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      PRODUCT_BUNDLE_IDENTIFIER: com.jakubcabalek.karticky.ui
+      DEVELOPMENT_TEAM: NL96UW5HVB
+      SWIFT_VERSION: '6.0'
+      SWIFT_EMIT_LOC_STRINGS: YES
+  Karticky:
+    type: application
+    platform: iOS
+    sources:
+      - Karticky
+    dependencies:
+      - package: KartickyCore
+      - target: KartickyUI
+      - package: Supabase
+        product: Supabase
+    preBuildScripts:
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: sh "$SRCROOT/Config/SwiftLint.sh"
+    settings:
+      base:
+        # Stejné bundle id jako Expo aplikace: Swift verze je její aktualizace v TestFlightu.
+        PRODUCT_BUNDLE_IDENTIFIER: com.jakubcabalek.karticky
+        KARTICKY_URL_SCHEME: karticky
+        DEVELOPMENT_TEAM: NL96UW5HVB
+        CODE_SIGN_STYLE: Automatic
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_CFBundleDisplayName: Kartičky
+        INFOPLIST_KEY_NSCameraUsageDescription: Fotoaparát slouží ke skenování karet do sbírky.
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Config/Cloud.plist
+        TARGETED_DEVICE_FAMILY: '1'
+        SWIFT_VERSION: '6.0'
+        SWIFT_EMIT_LOC_STRINGS: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+  KartickyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: KartickyTests
+        excludes:
+          - __Snapshots__
+    dependencies:
+      - target: Karticky
+      - target: KartickyUI
+        embed: false
+      - package: KartickyCore
+      - package: SnapshotTesting
+        product: SnapshotTesting
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.jakubcabalek.karticky.tests
+        SWIFT_VERSION: '6.0'
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+schemes:
+  Karticky:
+    build:
+      targets:
+        Karticky: all
+    test:
+      targets:
+        - KartickyTests

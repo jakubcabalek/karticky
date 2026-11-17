@@ -1,0 +1,39 @@
+name: Swift checks (Jakubův Mac)
+
+# Testy Swiftu běží na Jakubově Macu jako „self-hosted runner“: nic nestojí a agenti
+# nemusejí testy pouštět ručně a číst jejich výpis. Zapíná se proměnnou repozitáře
+# MAC_RUNNER=true (Settings → Secrets and variables → Actions → Variables), viz
+# docs/lokalne.md. Když je Mac vypnutý, úloha počká ve frontě, nic se nerozbije.
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['swift/**', 'scripts/swift-check.sh', 'scripts/swift-fixtures.cjs', '.github/workflows/swift.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: karticky-swift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift:
+    if: vars.MAC_RUNNER == 'true'
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 60
+    env:
+      KARTICKY_SIM: Karticky CI
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kontroly Swiftu
+        run: scripts/swift-check.sh
+      - name: Výpisy při chybě
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-check-logs
+          path: |
+            swift/build/check/*.log
+          retention-days: 7
