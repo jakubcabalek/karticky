@@ -1,10 +1,7 @@
 import KartickyUI
 
-/// Data obrazovek do doby, než je napojí knihovna (fáze 2 a 4).
-/// Zatím i vydaný build (první TestFlight) ukazuje ukázková data; s fází 2 zpět jen do ladicího buildu.
+/// Balíčky do doby, než je napojí linka Codexu (B5). Sbírka a Wishlist už berou data z knihovny.
 enum Sample {
-    static let collection = CardSummary.samples
-    static let wishlist = CardSummary.wishlistSamples
     static let decks: [DeckSummary] = [
         DeckSummary(
             id: "atraxa", name: "Atraxa superfriends", format: "Commander", commander: CardSummary.samples[3],

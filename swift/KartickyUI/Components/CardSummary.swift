@@ -38,3 +38,16 @@ public struct CardSummary: Identifiable, Hashable, Sendable {
         self.currency = currency
     }
 }
+
+public extension CardSummary {
+    /// Řádek knihovny → co ukazují komponenty. Cena v EUR podle provedení (foil / obyčejná).
+    init(entry: CardEntry) {
+        let card = entry.card
+        self.init(
+            id: entry.key, name: card.printedName ?? card.name, imageURL: card.imageNormal ?? card.imageSmall,
+            manaCost: card.manaCost, colors: ManaColor.from(card.colors.isEmpty ? card.colorIdentity : card.colors),
+            typeLine: card.typeLine, setCode: card.set.uppercased(), collectorNumber: card.collectorNumber,
+            quantity: entry.quantity, foil: entry.finish == .foil, price: entryPrice(entry, .eur)
+        )
+    }
+}

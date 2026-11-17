@@ -1,3 +1,4 @@
+import KartickyCore
 import KartickyUI
 import SnapshotTesting
 import SwiftUI
@@ -8,9 +9,10 @@ import XCTest
 @MainActor
 final class ScreenSnapshots: XCTestCase {
     func testCollection() { verify { tabbed(.collection) { CollectionScreen() } } }
-    func testCollectionEmpty() { verify { tabbed(.collection) { CollectionScreen(cards: []) } } }
+    func testCollectionEmpty() { verify(model: .preview(Library())) { tabbed(.collection) { CollectionScreen() } } }
     func testDecks() { verify { tabbed(.decks) { DecksScreen() } } }
     func testWishlist() { verify { tabbed(.wishlist) { WishlistScreen() } } }
+    func testWishlistEmpty() { verify(model: .preview(Library())) { tabbed(.wishlist) { WishlistScreen() } } }
     func testLife() { verify { tabbed(.life) { LifeScreen() } } }
     func testScan() { verify { ScanScreen() } }
 
@@ -37,16 +39,17 @@ final class ScreenSnapshots: XCTestCase {
     }
 
     private func verify<Content: View>(
+        model: AppModel = .preview(),
         file: StaticString = #filePath, testName: String = #function, line: UInt = #line,
         @ViewBuilder content: () -> Content
     ) {
-        warmUp(styled(content(), .lightStandard))
+        warmUp(styled(content().environment(model), .lightStandard))
         for device in [SnapshotDevice.pro, SnapshotDevice.se] {
             for variant in SnapshotVariant.allCases {
                 let traits = variant.traits(scale: device.scale)
                 let config = ViewImageConfig(safeArea: device.safeArea, size: device.size, traits: traits)
                 assertSnapshot(
-                    of: styled(content(), variant),
+                    of: styled(content().environment(model), variant),
                     // Bez vykreslení v okně je obrazovka na iOS 27 prázdná. Sklo a materiály se ale
                     // v okně skládají pokaždé trochu jinak (barva o pár %), proto tolerance barvy;
                     // podíl pixelů je přísný, takže změna textu nebo rozložení neprojde.

@@ -116,7 +116,11 @@ struct AppTabBar: View {
             .frame(maxWidth: .infinity, minHeight: 52)
             .background {
                 if selected {
-                    Capsule().fill(.primary.opacity(0.1)).matchedGeometryEffect(id: "tab", in: highlight)
+                    // Hustý materiál pod vybranou záložkou: popisek je čitelný i nad pestrými kartami.
+                    Capsule()
+                        .fill(.thickMaterial)
+                        .overlay(Capsule().fill(Color.kartickyAccent.opacity(0.14)))
+                        .matchedGeometryEffect(id: "tab", in: highlight)
                 }
             }
             .contentShape(Capsule())
@@ -164,7 +168,9 @@ private extension View {
     }
 }
 
-#Preview("Sbírka") { RootView() }
-#Preview("Balíčky") { RootView(tab: .decks) }
-#Preview("Wishlist") { RootView(tab: .wishlist) }
-#Preview("Životy") { RootView(tab: .life) }
+#if DEBUG
+#Preview("Sbírka") { RootView().environment(AppModel.preview()) }
+#Preview("Balíčky") { RootView(tab: .decks).environment(AppModel.preview()) }
+#Preview("Wishlist") { RootView(tab: .wishlist).environment(AppModel.preview()) }
+#Preview("Životy") { RootView(tab: .life).environment(AppModel.preview()) }
+#endif
