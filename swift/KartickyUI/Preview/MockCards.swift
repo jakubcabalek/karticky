@@ -1,8 +1,8 @@
-#if DEBUG
 import Foundation
 import KartickyCore
 
-/// Mock data pro náhledy a snapshoty (bez sítě: obrázky jsou placeholdery).
+/// Mock data pro náhledy, snapshoty a první TestFlight build (bez sítě: obrázky jsou placeholdery).
+/// Až obrazovky napojí knihovna (fáze 2), vrátit pod `#if DEBUG`.
 public extension CardSummary {
     static let samples: [CardSummary] = [
         CardSummary(
@@ -65,4 +65,3 @@ public extension CardSummary {
         )
     ]
 }
-#endif

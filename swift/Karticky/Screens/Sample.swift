@@ -1,9 +1,8 @@
 import KartickyUI
 
 /// Data obrazovek do doby, než je napojí knihovna (fáze 2 a 4).
-/// Ladicí build ukazuje mock data, vydaný build prázdné obrazovky.
+/// Zatím i vydaný build (první TestFlight) ukazuje ukázková data; s fází 2 zpět jen do ladicího buildu.
 enum Sample {
-    #if DEBUG
     static let collection = CardSummary.samples
     static let wishlist = CardSummary.wishlistSamples
     static let decks: [DeckSummary] = [
@@ -20,9 +19,4 @@ enum Sample {
             colors: [.blue, .red], cardCount: 60, targetCount: 60, missing: 2
         )
     ]
-    #else
-    static let collection: [CardSummary] = []
-    static let wishlist: [CardSummary] = []
-    static let decks: [DeckSummary] = []
-    #endif
 }
