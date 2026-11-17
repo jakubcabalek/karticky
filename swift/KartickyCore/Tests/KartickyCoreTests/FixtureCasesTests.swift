@@ -24,13 +24,8 @@ enum Fixtures {
 
     /// "modul.funkce" → volání portu s argumenty z fixture, výsledek jako JSON.
     /// Doplňuje se postupně s převodem logiky (docs/swiftui-plan.md, bod 5).
-    static let ports: [String: @Sendable ([JSONValue]) throws -> JSONValue] = [
-        "cardData.formatPrice": { args in
-            guard case .number(let value) = args[0], case .string(let code) = args[1],
-                  let currency = PriceCurrency(rawValue: code) else { throw FixtureError.badArguments(args) }
-            return .string(formatPrice(value, currency))
-        },
-    ]
+    /// Linka „knihovna“ (LibraryPorts.swift); porty druhé linky (PlayPorts.swift) se přidají sem.
+    static let ports: [String: LibraryPorts.Port] = LibraryPorts.all
 }
 
 enum FixtureError: Error {
@@ -40,6 +35,7 @@ enum FixtureError: Error {
 @Test func fixturesLoad() throws {
     let file = try Fixtures.load()
     #expect(!file.cases.isEmpty)
+    #expect(file.now == LibraryPorts.now)
 }
 
 @Test func portedFunctionsMatchTypeScript() throws {
