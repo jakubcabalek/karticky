@@ -48,6 +48,19 @@ struct AppModelTests {
         #expect(await store.saves == 0)
     }
 
+    @Test func notLoadedLibraryIsNeverSaved() async {
+        let store = MemoryLibraryStore(.sample)
+        let model = AppModel(store: store)
+        model.add(card, to: .collection)
+        await model.saveNow()
+        #expect(await store.saves == 0)
+        await model.load()
+        #expect(model.library == .sample)
+        model.add(card, to: .collection)
+        await model.saveNow()
+        #expect(await store.library.collection.count == Library.sample.collection.count + 1)
+    }
+
     @Test func fileStoreRoundTripAndBrokenFile() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

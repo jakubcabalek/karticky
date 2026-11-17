@@ -39,6 +39,7 @@ final class AppModel {
     var now: String { Date.ISO8601FormatStyle(includingFractionalSeconds: true).format(clock()) }
 
     func change(_ update: (inout Library) -> Void) {
+        guard isLoaded else { return }
         let before = library
         var after = library
         update(&after)
@@ -57,10 +58,12 @@ final class AppModel {
         }
     }
 
-    /// Okamžitý zápis (aplikace jde do pozadí).
+    /// Okamžitý zápis (aplikace jde do pozadí). Nenačtená knihovna se nikdy neukládá:
+    /// prázdná výchozí by přepsala uložená data.
     func saveNow() async {
         pendingSave?.cancel()
         pendingSave = nil
+        guard isLoaded else { return }
         try? await store.save(library)
     }
 
