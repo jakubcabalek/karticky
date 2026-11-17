@@ -2,24 +2,29 @@ import KartickyCore
 import KartickyUI
 import SwiftUI
 
-/// Wishlist s cílovou cenou. Fáze 2 doplní hlídání cen z knihovny.
+/// Wishlist s hlídáním ceny: nahoře karty, které stojí cílovou cenu nebo méně (`priceAlerts`).
+/// Swipe doleva smaže, doprava „Mám ji“ (přesun do sbírky), ťuknutí nastaví cílovou cenu.
 struct WishlistScreen: View {
-    var cards: [CardSummary] = Sample.wishlist
+    @Environment(AppModel.self) private var model
+    @State private var editing: CardEntry?
+    @State private var targetText = ""
 
     var body: some View {
+        let wishlist = model.library.wishlist
+        let alerts = Set(priceAlerts(wishlist).map(\.entry.key))
         NavigationStack {
             List {
-                if !dropped.isEmpty {
+                if !alerts.isEmpty {
                     Section("Zlevnilo") {
-                        ForEach(dropped) { WishlistRow(card: $0) }
+                        ForEach(wishlist.filter { alerts.contains($0.key) }) { row($0, dropped: true) }
                     }
                 }
-                Section(dropped.isEmpty ? "" : "Ostatní") {
-                    ForEach(rest) { WishlistRow(card: $0) }
+                Section(alerts.isEmpty ? "" : "Ostatní") {
+                    ForEach(wishlist.filter { !alerts.contains($0.key) }) { row($0, dropped: false) }
                 }
             }
             .overlay {
-                if cards.isEmpty {
+                if wishlist.isEmpty {
                     ContentUnavailableView(
                         "Wishlist je prázdný", systemImage: "star",
                         description: Text("Karty, které chceš, tady hlídají cenu.")
@@ -27,27 +32,62 @@ struct WishlistScreen: View {
                 }
             }
             .navigationTitle("Wishlist")
+            .alert("Cílová cena", isPresented: isEditing, presenting: editing) { entry in
+                TextField("např. 12,50", text: $targetText)
+                    .keyboardType(.decimalPad)
+                Button("Uložit") { model.setTargetPrice(entry.key, to: parsePrice(targetText)) }
+                if entry.targetPrice != nil {
+                    Button("Nehlídat", role: .destructive) { model.setTargetPrice(entry.key, to: nil) }
+                }
+                Button("Zrušit", role: .cancel) {}
+            } message: { entry in
+                Text("Dáme vědět, až \(entry.card.name) bude stát tolik nebo méně (EUR).")
+            }
         }
     }
 
-    /// Cílová cena je zatím `previousPrice` z mock dat.
-    private var dropped: [CardSummary] {
-        cards.filter { card in
-            guard let price = card.price, let target = card.previousPrice else { return false }
-            return price <= target
+    private func row(_ entry: CardEntry, dropped: Bool) -> some View {
+        Button {
+            targetText = entry.targetPrice.map { formatNumber($0) } ?? ""
+            editing = entry
+        } label: {
+            WishlistRow(entry: entry, dropped: dropped)
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing) {
+            Button("Smazat", systemImage: "trash", role: .destructive) { model.remove(entry.key, from: .wishlist) }
+        }
+        .swipeActions(edge: .leading) {
+            Button("Mám ji", systemImage: "checkmark") { model.markAcquired(entry.key) }
+                .tint(Color.kartickyPositive)
         }
     }
 
-    private var rest: [CardSummary] {
-        cards.filter { !dropped.contains($0) }
+    private var isEditing: Binding<Bool> {
+        Binding { editing != nil } set: { if !$0 { editing = nil } }
     }
 }
 
+/// „12,5“ i „12.50 €“ → 12.5; prázdné nebo nesmyslné → nil (cena se nehlídá).
+func parsePrice(_ text: String) -> Double? {
+    let cleaned = text.replacingOccurrences(of: ",", with: ".")
+        .filter { $0.isNumber || $0 == "." }
+    guard let value = Double(cleaned), value > 0 else { return nil }
+    return value
+}
+
+/// 12.5 → „12,50“ do pole pro úpravu.
+func formatNumber(_ value: Double) -> String {
+    String(format: "%.2f", value).replacingOccurrences(of: ".", with: ",")
+}
+
 struct WishlistRow: View {
-    let card: CardSummary
+    let entry: CardEntry
+    var dropped = false
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
+        let card = CardSummary(entry: entry)
         // Při velkém písmu pod sebou, ať se název ani cena nelámou po písmenech.
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
@@ -59,26 +99,32 @@ struct WishlistRow: View {
                     HStack(spacing: 6) {
                         ManaDots(cost: card.manaCost, size: 13)
                         Text(card.setCode).font(.caption).foregroundStyle(.secondary)
+                        if entry.quantity > 1 {
+                            Text("\(entry.quantity)×").font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
             if !typeSize.isAccessibilitySize { Spacer(minLength: 8) }
             VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
                 PriceText(card.price, currency: card.currency, showsChange: false)
-                if let target = card.previousPrice {
-                    Text("cíl \(formatPriceText(target))")
+                if let target = entry.targetPrice {
+                    HStack(spacing: 3) {
+                        Image(systemName: dropped ? "arrow.down" : "bell")
+                        Text("cíl \(formatPrice(target, .eur))")
+                    }
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(dropped ? Color.kartickyPositive : .secondary)
                         .monospacedDigit()
                 }
             }
         }
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-    }
-
-    private func formatPriceText(_ value: Double) -> String {
-        formatPrice(value, card.currency)
     }
 }
 
-#Preview { WishlistScreen() }
+#if DEBUG
+#Preview("Wishlist") { WishlistScreen().environment(AppModel.preview()) }
+#Preview("Prázdný") { WishlistScreen().environment(AppModel.preview(.init())) }
+#endif

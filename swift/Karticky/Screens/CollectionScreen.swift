@@ -2,10 +2,10 @@ import KartickyCore
 import KartickyUI
 import SwiftUI
 
-/// Sbírka: hodnota, filtry jako kapsle a mřížka karet. Fáze 1 jen s mock daty,
-/// knihovna a hledání na Scryfallu přijdou ve fázi 2.
+/// Sbírka: počet a hodnota, filtry jako kapsle a mřížka karet z knihovny.
+/// Hledání na Scryfallu přijde s A3, detail karty s A4.
 struct CollectionScreen: View {
-    var cards: [CardSummary] = Sample.collection
+    @Environment(AppModel.self) private var model
     @State private var query = ""
     @State private var filter: CollectionFilter = .all
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -19,18 +19,27 @@ struct CollectionScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    summary
-                    filters
-                    if shown.isEmpty {
+                    if !model.library.collection.isEmpty {
+                        summary
+                        filters
+                    }
+                    if model.library.collection.isEmpty {
                         ContentUnavailableView(
                             "Zatím žádné karty", systemImage: "square.grid.3x3",
-                            description: Text("Naskenuj kartu nebo ji vyhledej.")
+                            description: Text("Naskenuj nebo vyhledej první kartu.")
+                        )
+                        .padding(.top, 40)
+                    } else if shown.isEmpty {
+                        ContentUnavailableView(
+                            "Nic neodpovídá", systemImage: "line.3.horizontal.decrease.circle",
+                            description: Text("Zkus jiný filtr nebo hledaný text.")
                         )
                         .padding(.top, 40)
                     } else {
                         LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(shown) { card in
-                                CardTile(card: card)
+                            ForEach(shown) { entry in
+                                CardTile(card: CardSummary(entry: entry))
+                                    .contextMenu { menu(for: entry) }
                             }
                         }
                     }
@@ -55,17 +64,37 @@ struct CollectionScreen: View {
         }
     }
 
+    @ViewBuilder private func menu(for entry: CardEntry) -> some View {
+        Button("Přidat kus", systemImage: "plus") {
+            model.setQuantity(entry.key, in: .collection, to: entry.quantity + 1)
+        }
+        Button("Odebrat kus", systemImage: "minus") {
+            model.setQuantity(entry.key, in: .collection, to: entry.quantity - 1)
+        }
+        .disabled(entry.quantity <= 1)
+        Button("Smazat ze sbírky", systemImage: "trash", role: .destructive) {
+            model.remove(entry.key, from: .collection)
+        }
+    }
+
     private var summary: some View {
-        let count = cards.reduce(0) { $0 + $1.quantity }
-        let value = cards.reduce(0.0) { $0 + ($1.price ?? 0) * Double($1.quantity) }
-        let previous = cards.reduce(0.0) { $0 + ($1.previousPrice ?? $1.price ?? 0) * Double($1.quantity) }
+        let collection = model.library.collection
+        let count = totalCards(collection)
+        let value = listValue(collection, .eur)
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
         return layout {
-            Text("\(count) karet")
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(cardCount(count))
+                    .foregroundStyle(.secondary)
+                if value.unpriced > 0 {
+                    Text("\(value.unpriced) bez ceny")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
             if !typeSize.isAccessibilitySize { Spacer() }
-            PriceText(value, previous: previous)
+            PriceText(value.total)
                 .font(.title3)
         }
     }
@@ -100,13 +129,15 @@ struct CollectionScreen: View {
         .scrollClipDisabled()
     }
 
-    private var shown: [CardSummary] {
-        cards.filter { card in
+    private var shown: [CardEntry] {
+        model.library.collection.filter { entry in
+            let card = entry.card
             let matchesQuery = query.isEmpty || card.name.localizedStandardContains(query)
+                || (card.printedName?.localizedStandardContains(query) ?? false)
             switch filter {
             case .all: return matchesQuery
-            case .foil: return matchesQuery && card.foil
-            case .color(let color): return matchesQuery && card.colors.contains(color)
+            case .foil: return matchesQuery && entry.finish == .foil
+            case .color(let color): return matchesQuery && card.colors.contains(color.rawValue)
             }
         }
     }
@@ -149,4 +180,16 @@ struct CardTile: View {
     }
 }
 
-#Preview { CollectionScreen() }
+/// „1 karta“, „3 karty“, „5 karet“.
+func cardCount(_ count: Int) -> String {
+    switch count {
+    case 1: "1 karta"
+    case 2...4: "\(count) karty"
+    default: "\(count) karet"
+    }
+}
+
+#if DEBUG
+#Preview("Sbírka") { CollectionScreen().environment(AppModel.preview()) }
+#Preview("Prázdná") { CollectionScreen().environment(AppModel.preview(.init())) }
+#endif

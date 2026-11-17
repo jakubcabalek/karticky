@@ -7,6 +7,7 @@ Agenti si nic nepamatují mezi sezeními. Tady je, kde se skončilo. Na začátk
 | Agent | Větev | Co | Stav |
 | --- | --- | --- | --- |
 | Claude Code | `claude/swift-knihovna-core` | A1: modely a logika knihovny v KartickyCore | PR otevřený, čeká na revizi |
+| Claude Code | `claude/swift-knihovna-app` | A2: ukládání, AppModel, skutečná Sbírka a Wishlist (staví na #13 a #12) | PR otevřený, čeká na revizi |
 
 ## Fronta (Swift, podle docs/swiftui-plan.md)
 

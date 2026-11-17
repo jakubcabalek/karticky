@@ -168,7 +168,9 @@ private extension View {
     }
 }
 
-#Preview("Sbírka") { RootView() }
-#Preview("Balíčky") { RootView(tab: .decks) }
-#Preview("Wishlist") { RootView(tab: .wishlist) }
-#Preview("Životy") { RootView(tab: .life) }
+#if DEBUG
+#Preview("Sbírka") { RootView().environment(AppModel.preview()) }
+#Preview("Balíčky") { RootView(tab: .decks).environment(AppModel.preview()) }
+#Preview("Wishlist") { RootView(tab: .wishlist).environment(AppModel.preview()) }
+#Preview("Životy") { RootView(tab: .life).environment(AppModel.preview()) }
+#endif
