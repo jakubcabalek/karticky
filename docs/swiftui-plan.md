@@ -1,7 +1,7 @@
 # Přepis Kartiček do SwiftUI
 
 Stav: plán, schválený majitelem 17. 11. 2026 („Teď pojedeme jen appku na iPhone“).
-Důvod: Fakturo ve Swiftu je vizuálně i v plynulosti o level jinde; Kartičky mají působit jako karty Magicu a na to potřebují nativní animace, přechody a efekty.
+Důvod: Fakturo ve Swiftu je vizuálně i v plynulosti o level jinde. Vzhled: nativní iOS, grafiku dělají obrázky karet (majitel 17. 11. 2026 zrušil koncept „každá obrazovka je karta“), viz `docs/swiftui-design.md`.
 
 Swift píše agent s Xcode na Macu (Codex nebo Claude Code), Claude v cloudu navrhuje, převádí logiku do testovacích dat a reviduje každý PR. Stejný postup jako u Fakturo (`jakubcabalek/fakturo`, `docs/swiftui-plan.md`).
 
@@ -21,10 +21,10 @@ swift/
   Karticky/                   # aplikace (SwiftUI)
     KartickyApp.swift
     AppModel.swift            # @Observable: knihovna, ukládání, synchronizace
-    Screens/                  # Skenovat, Hledat, Sbírka, Balíčky, Detail balíčku, Wishlist, Životy, Profil, Detail karty
+    Screens/                  # Sbírka (+ hledání), Detail karty, Skenování, Balíčky, Detail balíčku, Wishlist, Životy, Profil
     Services/                 # Scryfall, LocalStore, Cloud (Supabase), ShopPrices, Scanner (kamera + Vision)
     Resources/                # Assets.xcassets, Localizable.xcstrings, scan-index-v1.bin (stahuje se při buildu)
-  KartickyUI/                 # design systém: rám karty, mana symboly, ruka karet, foil, tlačítka (docs/swiftui-design.md)
+  KartickyUI/                 # komponenty: obrázek karty, lesk fólie, barvy many, panel života, rámeček skeneru (docs/swiftui-design.md)
   KartickyCore/               # Swift Package: čistá logika (port cardData.ts a spol.), jen Foundation
     Tests/KartickyCoreTests/Fixtures/cases.json   # generované z TypeScriptu
   KartickyTests/              # testy aplikace a snapshoty obrazovek (__Snapshots__)
@@ -38,7 +38,7 @@ swift/
 
 | Věc | Rozhodnutí | Proč |
 | --- | --- | --- |
-| Minimální iOS | 18.0; Liquid Glass (`glassEffect`) jen za `if #available(iOS 26, *)` a jen tam, kde nepřebije karetní vzhled | Karty mají vlastní materiál (pergamen, kov), sklo jen na plovoucí ovládání. |
+| Minimální iOS | 18.0; Liquid Glass (`glassEffect`, systémová lišta) za `if #available(iOS 26, *)` | Nativní vzhled jako Fakturo. |
 | Architektura | `@Observable` `AppModel` s knihovnou; ViewModel pro každou obrazovku (`@Observable`, protokol, mock v `#if DEBUG` pro náhledy a snapshoty) | Jako Fakturo. |
 | Závislosti | `supabase-swift`, `swift-snapshot-testing` (jen testy). Nic dalšího bez domluvy. | |
 | Scryfall | `URLSession`, 100 ms mezi požadavky (actor), hlavičky `Accept: application/json` a `User-Agent: Karticky/<verze>` (Scryfall ho vyžaduje), `/cards/collection` po 75 | Stejná pravidla jako `scryfall.ts`. |
@@ -70,7 +70,7 @@ swift/
 | `keywords.ts` | `Keywords.swift` | Celý slovník. |
 | `lifeCounter.ts` | `LifeCounter.swift` | Náhoda (`rollDie`, `flipCoin`, `pickStartingPlayer`) bere generátor jako parametr. |
 | `base64.ts` | nepřevádí se, `Data(base64Encoded:)` | Fixture ho pokrývají jen pro kontrolu. |
-| `theme.ts`, `cardFrame.tsx`, `nav.tsx` | `KartickyUI` | Vzhled, viz `docs/swiftui-design.md`. |
+| `theme.ts`, `cardFrame.tsx`, `nav.tsx` | nepřevádí se | Swift má nativní vzhled, viz `docs/swiftui-design.md`. |
 
 Pravidla: stejné názvy funkcí (camelCase), ať jde review dělat vedle sebe; „teď“ jako parametr, ne `Date()` uvnitř; porovnávání textů jako TS (ne `localizedCompare`).
 
@@ -79,11 +79,11 @@ Pravidla: stejné názvy funkcí (camelCase), ať jde review dělat vedle sebe; 
 Každá fáze je jeden nebo víc PR do `main` (větve `codex/swift-<téma>` nebo `claude/swift-<téma>`). Další fáze začíná, až je předchozí sloučená.
 
 0. **Kostra** – hotová v tomto PR: `project.yml`, `KartickyCore` s `JSONValue` a testem fixture, `KartickyUI/Theme.swift`, prázdná aplikace, skripty `swift-check.sh` a `testflight.sh`, workflow na Macu. Úkol pro Mac: `xcodegen generate`, build v simulátoru, opravit, co v kostře nejde přeložit (psáno bez Xcode).
-1. **Design systém** – `CardFrame` (rám, název + mana, okno obrázku, typová řádka + symbol edice, pergamenový textbox, P/T, sběratelská řádka), `ManaSymbol`, `MiniCard`, ruka karet jako menu, tlačítka, foil. Galerie komponent v náhledech a snapshoty. Bez dat.
-2. **Knihovna offline** – modely a `normalizeLibrary`, `LocalStore`, `AppModel`, Hledat (Scryfall), Detail karty (obrázek, ceny Scryfall + e-shopy, „Co karta umí“), Sbírka, Wishlist (cílová cena, zlevnilo), denní obnova cen.
+1. **Navigace a komponenty** – `TabView` (Sbírka, Balíčky, Wishlist, Životy + tlačítko Skenovat), `CardImage`, `FoilShine`, `ManaDots`, `PriceText`, `ColorIdentityGradient`, barvy a akcent. Náhledy a snapshoty s mock daty, bez sítě.
+2. **Knihovna offline** – modely a `normalizeLibrary`, `LocalStore`, `AppModel`, hledání ve Sbírce (Scryfall), Detail karty (obrázek, ceny Scryfall + e-shopy, „Co karta umí“), Sbírka, Wishlist (cílová cena, zlevnilo), denní obnova cen.
 3. **Balíčky** – seznam, detail s commanderem, statistiky (křivka, typy, barvy), legalita, import a export textu, chybějící karty do wishlistu.
 4. **Skenování** – živá kamera, rozpoznání (index + OCR + jazyky), volba cíle (sbírka / wishlist / balíček / jen ceny), foil, série karet za sebou.
-5. **Životy** – celé počítadlo (hráči jako karty, otočená horní polovina, jed, commander damage, žetony, kostky, zpět), uložení hry, obrazovka nezhasíná (`isIdleTimerDisabled`).
+5. **Životy** – celé počítadlo (panely v barvách many, otočená horní polovina, jed, commander damage, žetony, kostky, zpět), uložení hry, obrazovka nezhasíná (`isIdleTimerDisabled`).
 6. **Účet a převod** – přihlášení, synchronizace, převzetí dat z Expo aplikace, Profil, porovnání s Expo aplikací obrazovku po obrazovce, první Swift build do TestFlightu.
 
 Build do TestFlightu jde udělat po kterékoli fázi (`scripts/testflight.sh`), ale nahradí Expo aplikaci u testerů. Proto první Swift build až po fázi 2 a s převzetím dat (část fáze 6 se udělá dřív).

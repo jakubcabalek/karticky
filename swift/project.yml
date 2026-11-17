@@ -65,7 +65,6 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Kartičky
         INFOPLIST_KEY_NSCameraUsageDescription: Fotoaparát slouží ke skenování karet do sbírky.
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: Config/Cloud.plist
         TARGETED_DEVICE_FAMILY: '1'

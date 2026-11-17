@@ -1,78 +1,40 @@
-# Vzhled Swift aplikace: každá obrazovka je karta
+# Vzhled Swift aplikace: nativní iOS, grafiku dělají karty
 
-Majitel schválil třetí návrh („every screen is a card“) 14. 11. 2026 po dvou kolech: pryč s fialovou, zemité barvy, žádná sterilita, celá aplikace má být v designu karet Magicu. Expo verze ho má v `theme.ts`, `cardFrame.tsx` a `nav.tsx`; Swift ho má udělat pořádně, s tím, co React Native nezvládl: přechody, textury, světlo, pohyb.
+Majitel 17. 11. 2026: „Zahoďme ten koncept, že každá stránka je jiná karta. Chci, ať to je native vypadající a do toho nějaká hezká grafika.“ Koncept „každá obrazovka je karta“ (Expo verze, `theme.ts`, `cardFrame.tsx`) se do Swiftu **nepřebírá**.
 
-Tokeny jsou v `swift/KartickyUI/Theme.swift` (hodnoty 1:1 z `theme.ts`). Obrazovky si komponenty nevyrábějí samy, berou je z `KartickyUI`.
+Náhledy: návrhové plátno „Kartičky – nový design“ (claude.ai), řada „Nativní iOS verze“ (Sbírka, Detail karty, Skenování, Balíček, Životy).
 
 ## Zásady
 
-- **Vlastní symboly, ne oficiální.** Žádné kopie mana symbolů, symbolů edic, rámů ani písma z Magicu (Beleren, Plantin). Mana „kameny“ jsou naše jednoduché kruhy, symbol edice Kartiček je malá karta. Obrázky karet ze Scryfallu jen celé, s řádkem autora.
-- **Stůl je tmavý** (`Ink.table` #0B0806), karta na něm svítí. Aplikace je jen v tmavém režimu (`UIUserInterfaceStyle = Dark`); pergamen je světlý sám o sobě.
-- **Čitelnost má přednost před ozdobou.** Text na pergamenu `Ink.text`, kontrast AA, Dynamic Type do accessibility3 (rám se zúží, textbox roste a scrolluje).
-- **Pohyb s fyzikou karty.** Pružiny (`.spring(response: 0.35, dampingFraction: 0.8)`), karty se zvedají, otáčejí a pokládají. Respektovat „Omezit pohyb“.
+- **Systémové všechno.** `TabView` s Liquid Glass lištou (iOS 26, jinak systémová lišta), `NavigationStack` s velkými titulky, `List` / `.insetGrouped`, `.searchable`, `sheet` s detenty, `Menu`, `confirmationDialog`, swipe akce, kontextové menu s náhledem karty. Písmo SF (Dynamic Type do accessibility3), ikony SF Symbols.
+- **Grafiku dělají karty samy.** Obrázky karet ze Scryfallu jsou hlavní vizuál: mřížka karet ve Sbírce, velká karta v detailu, karty v seznamech. Kolem nich jen jemná „atmosféra“: rozmazaný obrázek karty jako pozadí hlavičky (`.blur` + gradient do pozadí), barevná identita balíčku jako přechod v hlavičce.
+- **Pohyb a světlo tam, kde dávají smysl:** fólie s duhovým leskem podle náklonu telefonu (`CMMotionManager`, při „Omezit pohyb“ statický), detail karty jde natočit prstem (`rotation3DEffect`), zoom přechod z mřížky do detailu (`navigationTransition(.zoom)`), haptika při změně životů a při rozpoznání karty.
+- **Tmavý i světlý režim** (systémové barvy). Tmavý je výchozí na náhledech, protože karty v něm vyniknou.
+- **Žádné kopie grafiky Magicu** (rámy, mana symboly, písmo Beleren/Plantin). Barvy many jsou naše jednoduché kolečka; obrázky karet jen celé, s řádkem autora.
 
-## Barvy sekcí
+## Barvy
 
-| Sekce | Rám | Typová řádka |
-| --- | --- | --- |
-| Skenovat | modrá U | Instant — Kamera |
-| Hledat | modrá U | Sorcery — Věštba |
-| Sbírka | bezbarvá C | Artifact — Truhla |
-| Balíčky | zlatá M; otevřený balíček v barvách commandera (`FrameColor.forColors`) | Legendary — Balíček / Commander |
-| Wishlist | zelená G | Enchantment — Přání |
-| Životy | červená R | Instant — Souboj |
-| Profil | bílá W | Planeswalker — Ty |
-| Detail karty | barva karty | typová řádka karty |
+- **Akcent:** jantarová `#E8973A` (tint aplikace, hlavní tlačítka, ceny, tlačítko Skenovat). Žádná fialová.
+- **Barvy many** (kolečka, grafy, přechody balíčků): W `#F4EBCF`, U `#5C9BD1`, B `#4A3F4F`, R `#E0663A`, G `#5E9B4C`, C `#B8AE9C`.
+- **Životy:** panely hráčů v přechodech barev many (modrá `#6FAEDD → #16324A`, zelená `#9CC870 → #1F3514`, červená `#F49A5C → #5A1C0C`, černá `#7D6E8A → #1A151E`, bílá a zlatá podobně).
+- Zelená `#6FCF8E` pro „přidáno“ / „zlevnilo“, žlutá `#F2C14E` pro varování (chybí karty).
 
-Mana kameny (výplň / kroužek / písmo): W #EFE3C4/#8A6A35/#2B2014, U #5C8FB3/#2E4A5E/#FFFFFF, B #3E342D/#C99A45/#FFFFFF, R #C4623A/#7A3518/#FFFFFF, G #6B8A40/#3A4A22/#FFFFFF, C #B8AE9C/#5A4F40/#2B2014. Vzácnost (symbol edice): common #3A3A38, uncommon #8FA9BA, rare #C99A45, mythic #D9652E.
+## Navigace
 
-## Písmo
+Spodní lišta se čtyřmi záložkami **Sbírka, Balíčky, Wishlist, Životy** a vedle ní samostatné kulaté tlačítko **Skenovat** (akcent, ikona fotoaparátu), jako hledání v Apple Music na iOS 26. Hledání karet je `.searchable` ve Sbírce (hledá ve sbírce i na Scryfallu). Profil je avatar vpravo nahoře ve Sbírce.
 
-- Nadpisy (název karty, typová řádka, P/T, tlačítka): **Alegreya SC Bold**. Text: **Alegreya** (kurzíva pro vysvětlivky v závorkách jako reminder text). Čísla a drobné popisky: **Alegreya Sans**. Všechny pod licencí OFL; soubory `.ttf` do `KartickyUI/Resources/Fonts`, registrace přes `UIAppFonts` nebo `CTFontManagerRegisterFontsForURL`.
-- Vždy přes `Font.custom(_:size:relativeTo:)`, aby fungoval Dynamic Type.
+## Obrazovky
+
+- **Sbírka**: velký titulek, pod ním počet karet a hodnota (s týdenní změnou), vyhledávání, filtry jako kapsle (Vše, Foil, barvy many, Commander, řazení), mřížka 3 sloupce: obrázek karty, název, počet × edice, cena. Fólie se lesknou.
+- **Detail karty**: rozmazaný obrázek karty jako pozadí, velká karta (lesk, natočení prstem), název + mana, typ · edice · číslo, tlačítka *Do sbírky* (akcent) / *Wishlist* / *Balíček*, „Máš 2×…“, sekce **Ceny** (Scryfall, e-shopy) a **Co karta umí** (vysvětlení klíčových slov česky), „Data o kartách: Scryfall“.
+- **Skenování**: celá obrazovka kamera, rohy rámečku v akcentu, které se chytí karty; nahoře skleněná tlačítka (Zavřít, *Ukládat do: Sbírka ▾*, blesk); dole skleněný panel s poslední rozpoznanou kartou (obrázek, název, edice, jazyk, cena, „✓ Přidáno… máš 4×“), tlačítka Foil / Jiná edice / Vrátit a seznam posledních.
+- **Balíček**: hlavička s přechodem barevné identity a kartou commandera, dlaždice (98/100 karet, průměr many, chybí ti), křivka many jako graf (Swift Charts), seznam po typech s náhledy karet.
+- **Životy**: celá obrazovka, 2–6 panelů v barvách many (horní řada otočená), velká čísla (SF, `tabular-nums`, `contentTransition(.numericText())`), „−3“ bublina, jed a commander damage jako štítky, uprostřed skleněná kapsle s nástroji (Zpět, kostka, zavřít).
 
 ## Komponenty (`KartickyUI`)
 
-### `CardFrame`
-Obrazovka = jedna karta na stole, poměr volný (vyplní displej), max. šířka 560 bodů.
-
-1. **Rám**: zaoblení 20, uvnitř odsazení 9. Výplň `palette.base` s jemným lineárním přechodem `light → base → dark` shora dolů a velmi slabou texturou (šum, `Canvas`). Okraj 2 body: nahoře a vlevo `light`, dole a vpravo `dark` (zkosená hrana).
-2. **Lišta s názvem**: výška ≥ 48, zaoblení 16, výplň `bar`, okraj `barEdge` (dole 3, jinde 2). Vlevo kulaté tlačítko „ruka“ (tři malé vějířem rozložené karty; v podstránce šipka zpět), název `title` 22, vpravo mana kameny (např. barvy commandera).
-3. **Okno obrázku** (volitelné): okraj 2 `barEdge`, zaoblení 3. Kamera při skenování, obrázek karty, vějíř tří nejdražších karet ve Sbírce.
-4. **Typová řádka**: jako lišta s názvem, výška ≥ 38, vpravo symbol edice (malá karta s třemi řádky) v barvě vzácnosti.
-5. **Textbox**: pergamen `Ink.parchment` s jemnou texturou a vnitřním stínem, okraj 2 `barEdge`, scrolluje. Tady je obsah obrazovky.
-6. **Patička**: vlevo sběratelská řádka `KRT · 003/007` a „Data o kartách: Scryfall · Kartičky“ (`palette.text`), vpravo **P/T rámeček** s hlavními čísly obrazovky (Sbírka „128 · 412 €“, balíček „87/100“, Wishlist „14 · ↓3“).
-
-Rám se při změně sekce **přebarví plynule** (animace barev), název a typová řádka se prolnou.
-
-### `ManaSymbol`, `ManaCost`
-Kruh s výplní, kroužkem 1,5 a spodním okrajem 3 (vypadá jako kámen). `ManaCost` = číslo (bezbarvý kámen s číslicí) + barevné kameny.
-
-### `MiniCard`
-Karta 63 : 88 v malém: rám, lišta s názvem, obrázek nebo velké iniciála na `glow`, typová řádka, kousek pergamenu s textem. Používá ruka karet, seznamy balíčků, hráči v Životech.
-
-### Ruka karet (menu „Tvoje ruka“)
-Ťuk na tlačítko v liště s názvem: stůl ztmavne, odspodu se vysune **vějíř sedmi karet** (jedna za sekci) – rotace ±5° na kartu, oblouk, aktuální sekce vystrčená nahoru se září `glow`. Tah prstem po kartách je zvedá (jako výběr karty z ruky), puštění „zahraje“ kartu: karta odletí nahoru a **zvětší se do nové obrazovky** (`matchedGeometryEffect` / zoom přechod). Haptika `.selection` při přejetí na další kartu. Popisky jako u VoiceOveru: „Sbírka. Karty, které máš. 128 karet.“
-
-### Foil
-Karty ve fólii (`finish == foil`) mají v seznamech a detailu duhový lesk: `LinearGradient` s průhlednými pruhy, posun podle náklonu telefonu (`CMMotionManager`, při „Omezit pohyb“ statický). Detail karty jde naklánět prstem (3D rotace, `rotation3DEffect`) a odlesk se pohybuje.
-
-### Tlačítka a ovládání
-- Hlavní: kůže `Ink.leather`, mosazný okraj `Ink.brass` (dole 3), text `Ink.brassLight` v `title`.
-- Vedlejší: pergamen tmavší (#E6D3A8) s okrajem #B89A62, text #7A4E1C.
-- Přepínače, segmenty a vstupy systémové, přebarvené tokeny (tint `Ink.leather`).
-- Plovoucí ovládání nad kamerou: `glassEffect` na iOS 26, jinak `.ultraThinMaterial`.
-
-## Obrazovky (obsah textboxu)
-
-- **Skenovat**: v okně obrázku živá kamera s rámečkem, který se chytne karty (obrys z `VNDetectRectangles`, zezelená při rozpoznání). Rozpoznaná karta „vyletí“ z kamery jako `MiniCard` do pergamenu, kde je seznam naskenovaných s cenou. Nahoře volba cíle (Sbírka / Wishlist / balíček / jen ceny).
-- **Hledat**: pole na pergamenu, výsledky jako řady karet (obrázek, název, edice, cena), ťuk = detail karty.
-- **Detail karty**: karta v rámu své barvy, obrázek přes celé okno, foil, ceny Scryfall a e-shopy, „Co karta umí“ (klíčová slova kurzívou jako reminder text), tlačítka + Sbírka / + Wishlist / + Balíček.
-- **Sbírka, Wishlist**: seznamy s mřížkou/řádky, množství stepperem, swipe akce, Wishlist s cílovou cenou a odznakem „zlevnilo“.
-- **Balíčky**: balíčky jako `MiniCard` v barvách commandera; detail s křivkou many (sloupce jako malé karty), typy, barvy, problémy s legalitou česky.
-- **Životy**: celá obrazovka je stůl; hráči jako velké karty v barvách many (horní řada otočená o 180°), život velkým číslem `title`, ťuk vlevo −1 / vpravo +1, podržení ±10, „−3“ bublina, haptika. Nástroje dole na kůži.
-- **Profil**: bílá karta „Planeswalker — Ty“, účet, synchronizace, verze.
+`CardImage` (obrázek ze Scryfallu s cache, zaoblení podle poměru karty, placeholder), `FoilShine` (modifikátor lesku), `ManaDots`, `PriceText`, `ColorIdentityGradient`, `LifePanel`, `ScanFrame`. Obrazovky si je nekreslí samy.
 
 ## Snapshoty
 
-Každá komponenta a obrazovka s mock daty: iPhone 18 Pro, nejmenší podporovaný iPhone, Dynamic Type accessibility3. Referenční PNG v `swift/KartickyTests/__Snapshots__`.
+Každá obrazovka s mock daty: tmavý a světlý režim, iPhone 18 Pro, nejmenší iPhone, accessibility3. Referenční PNG v `swift/KartickyTests/__Snapshots__`.
