@@ -15,6 +15,8 @@ Jakub napíše „pokračuj“ v Claude Code i v Codexu najednou. **Každý agen
 
 **Revize vždy dělá ten druhý.** Když v jedné lince čeká PR na revizi, druhý agent ho zkontroluje a sloučí, jakmile dokončí rozdělaný krok, a teprve pak pokračuje ve své lince. Claude v cloudu reviduje taky (čte Swift, ale nepřeloží ho).
 
+**Buildy do TestFlightu dělají agenti sami** (Jakub nemusí být u Macu): kdo sloučí PR, který mění, co Jakub v appce uvidí, pustí v `~/karticky` `git pull && scripts/testflight.sh` a do „Hotovo naposledy“ napíše číslo buildu a co vyzkoušet. Nejvýš 2 buildy denně; když build selže na podepisování nebo klíčence, nezkoušet znovu a zapsat to do „Body pro Jakuba“.
+
 Velikost PR: jeden úkol = jeden PR, kolem 300–800 řádků bez snapshotů. Větší úkol rozdělit.
 
 ## Teď rozpracované
