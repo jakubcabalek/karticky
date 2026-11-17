@@ -1,4 +1,4 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+This repository holds the Expo/React Native app (today's TestFlight build, frozen web) and its replacement, a SwiftUI iPhone app in `swift/` (see "SwiftUI app" below). New features go to the Swift app; the Expo app only gets fixes until Swift replaces it.
 
 ## Expo has changed — do not trust your training data
 
@@ -45,7 +45,7 @@ Docs: https://docs.expo.dev/eas/index.md
 - `index.ts` → `App.tsx` (screens). Pure logic lives in root modules with no React and no storage (`cardData.ts`, `scryfall.ts`), so `node --test` can test it through `tests/load.cjs`. Every new piece of logic gets a test there.
 - `appVersion.ts` decides test vs. public version (baked in at build time, `EXPO_PUBLIC_APP_CHANNEL`). The test version keeps its data under a separate storage key.
 - `devFeatures.ts` holds feature switches for later (empty while there is one version).
-- Look: every screen is an MTG card. `theme.ts` (frame colours per section, mana pips, parchment/brass, fonts), `cardFrame.tsx` (`CardFrame`: name bar + cost, art window, type line + set symbol, parchment text box, P/T box for the screen's numbers, collector line; `MiniCard`, `ManaCost`). Section colours: Skenovat/Hledat blue, Sbírka colourless, Balíčky gold (or the commander's colours), Wishlist green, Životy red, Profil white. No purple.
+- Look of the Expo app (not carried over to Swift): every screen is an MTG card. `theme.ts` (frame colours per section, mana pips, parchment/brass, fonts), `cardFrame.tsx` (`CardFrame`: name bar + cost, art window, type line + set symbol, parchment text box, P/T box for the screen's numbers, collector line; `MiniCard`, `ManaCost`). Section colours: Skenovat/Hledat blue, Sbírka colourless, Balíčky gold (or the commander's colours), Wishlist green, Životy red, Profil white. No purple.
 - Navigation: `nav.tsx` — "Tvoje ruka": the button in each card's name bar (via `MenuContext`) opens a hand of mini cards, one per section.
 - Scanning: `liveScan.ts` (live camera: a card is read when recognised in consecutive frames), `cardHash.ts` (artwork hash + index format, shared with `scripts/scan-index/build.mjs`), `scanIdentify.ts` (collector line → artwork → language), `ScanScreen.tsx` (UI, web camera), `modules/card-scanner` (iPhone: live camera view `CardLiveScannerView` with rectangle detection, plus the VisionKit document camera for a stack; Vision OCR in all languages). The index `scan-index-v1.bin` is built weekly by the "Scan index" workflow into the release `scan-index`; the web build copies it into the site. Changing the hash means bumping the file name (v2) and rebuilding without the previous index.
 - Accounts: `cloud.ts` (Supabase client, Apple/Google/Facebook/e-mail sign-in, one `library_data` row per user with a revision), `Account.tsx` (Profile), sync in `App.tsx` (pull + merge on sign-in and when the app comes back, push 1.5 s after a change; `mergeLibraries`/`recordDeletions` in `cardData.ts`). Accounts are optional; without Supabase settings they are off.
@@ -63,7 +63,8 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Kartičky release tracking
 
-- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI) and is deployed to karticky-9w4.pages.dev. No feature switches, no separate test release. `dev` is kept equal to `main`.
+- **For now there is one version.** The owner is not sharing the app yet, so every change goes straight to `main` (via a pull request with green CI). No feature switches, no separate test release. `dev` is kept equal to `main`.
+- **iPhone only (owner, 17. 11. 2026).** The web at karticky-9w4.pages.dev is frozen: no new features there. Cloudflare Pages keeps deploying because the Swift app calls `functions/api/` (shop prices).
 - When the owner starts sharing the app, switch to the Fakturo way: new features to `dev` (dev.karticky-9w4.pages.dev) behind switches in `devFeatures.ts`, released to `main` only when the owner says so. Until then `developmentFeatures` stays empty.
 - After every deploy (web or an iPhone build), update the owner's status page "Kartičky – kde co běží" (claude.ai artifact 8gEqQT18Jz9rGXyZRV3Yyr): what changed, where it is now, and the date.
 
@@ -78,3 +79,18 @@ Claude (in the cloud) and Codex (on the owner's Mac) both work on Kartičky. Git
 - **One agent per area at a time.** Before starting, check open pull requests (`gh pr list`); if the other agent has one touching the same files, wait or build on top of it.
 - **The PR description says what changed for the user**, in Czech. Claude keeps the status page up to date from it; Codex does not need to.
 - **`~/karticky` on the Mac is for builds.** It stays on `main`, clean, and is refreshed before every build with `git checkout -- package.json package-lock.json && git pull`.
+
+## SwiftUI app (`swift/`)
+
+The iPhone app is being rewritten in SwiftUI, the same way as Fakturo. Plan: `docs/swiftui-plan.md`, look: `docs/swiftui-design.md` (both in Czech). Read them before touching `swift/`.
+
+- **Swift is written by an agent with Xcode** (Codex or Claude Code on the Mac) and reviewed by another one. Claude in the cloud has no Xcode: it plans, keeps the fixtures, ports logic only into `KartickyCore` (checked by the Mac run) and reviews.
+- **The data format does not change.** Same `Library` JSON as `cardData.ts`, same `library_data` table; unknown fields survive a round trip.
+- **TypeScript stays the source of truth for logic** until the Swift app replaces the Expo one. A change to a ported module regenerates the fixtures (`node scripts/swift-fixtures.cjs`) in the same pull request; CI checks it (`--check`).
+- **`KartickyCore` is Foundation only**, tested with `swift test`; every ported function gets a line in `Fixtures.ports` so the TypeScript cases run against it.
+- **Native iOS look** (owner, 17. 11. 2026): system navigation, tab bar, lists and sheets; card images are the graphics. The Expo "every screen is a card" look is not carried over. Reuse `KartickyUI` (`CardImage`, `FoilShine`, `ManaDots`, …); light and dark appearance; Dynamic Type through accessibility3.
+- **User-facing copy in `Localizable.xcstrings`** (Czech).
+- **Check Swift with `scripts/swift-check.sh`** (`--fast` while working, full before a PR, `--record` for snapshots). Do not read whole logs unless the script output is not enough.
+- **TestFlight builds go through `scripts/testflight.sh`** (the owner can run it himself, see `docs/lokalne.md`). Swift build numbers start at 100. The first Swift build replaces the Expo app for testers, so it waits until the library, scanning basics and the data takeover from the Expo app work (plan, section 6).
+- **`docs/STAV.md` is the shared memory**: read it at the start of a session, write your row into "Teď rozpracované" at the first commit, update the queue at the end. Push after every working step.
+- On the Mac each agent works in its own worktree (`git -C ~/karticky worktree add ~/karticky-codex origin/main`); `~/karticky` stays clean on `main` for builds.

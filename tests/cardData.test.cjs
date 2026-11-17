@@ -98,3 +98,12 @@ test('fresh prices replace saved ones everywhere; wishlist alerts fire at or bel
   assert.equal(data.pricesAreStale(fresh, '2026-11-14T08:00:00.000Z'), true);
   assert.equal(data.setTargetPrice(fresh.wishlist, 'a:nonfoil', null)[0].targetPrice, undefined);
 });
+
+test('formatPrice writes prices the Czech way (also the Swift PriceText)', () => {
+  assert.equal(data.formatPrice(0.25, 'eur'), '0,25 €');
+  assert.equal(data.formatPrice(12.5, 'eur'), '12,50 €');
+  assert.equal(data.formatPrice(1234.567, 'eur'), '1 234,57 €');
+  assert.equal(data.formatPrice(1234567.8, 'usd'), '1 234 567,80 US$');
+  assert.equal(data.formatPrice(0, 'usd'), '0,00 US$');
+  assert.equal(data.formatPrice(-3.1, 'eur'), '-3,10 €');
+});
