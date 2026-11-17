@@ -15,7 +15,7 @@ settings:
   base:
     MARKETING_VERSION: '0.2.0'
     # Expo (EAS) buildy skončily na 3; Swift buildy začínají od 100, ať se to nemíchá.
-    CURRENT_PROJECT_VERSION: '100'
+    CURRENT_PROJECT_VERSION: '101'
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift.git
