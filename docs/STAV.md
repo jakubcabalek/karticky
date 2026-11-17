@@ -6,7 +6,7 @@ Agenti si nic nepamatují mezi sezeními. Tady je, kde se skončilo. Na začátk
 
 | Agent | Větev | Co | Stav |
 | --- | --- | --- | --- |
-| – | – | – | – |
+| Claude (Mac) | `claude/swift-zaklad` | Fáze 0 a 1: kostra v Xcode, navigace, komponenty | rozpracováno |
 
 ## Fronta (Swift, podle docs/swiftui-plan.md)
 

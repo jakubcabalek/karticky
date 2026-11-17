@@ -63,7 +63,10 @@ fi
 
 step "KartickyCore (swift test)"
 if swift test --package-path KartickyCore >"$LOGS/core.log" 2>&1; then
-  ok "$(grep -Eo "Executed [0-9]+ tests?" "$LOGS/core.log" | tail -n 1), $(grep -Eo "cases.json: [0-9]+ executed" "$LOGS/core.log" | grep -Eo "[0-9]+" | head -n 1) případů z fixture"
+  # swift-testing hlásí „Test run with N tests“, XCTest „Executed N tests“; sečíst obojí.
+  CORE_TESTS=$(( $(grep -Eo "Test run with [0-9]+ tests?" "$LOGS/core.log" | grep -Eo "[0-9]+" | tail -n 1 || echo 0) \
+    + $(grep -Eo "Executed [0-9]+ tests?" "$LOGS/core.log" | grep -Eo "[0-9]+" | tail -n 1 || echo 0) ))
+  ok "$CORE_TESTS testů, $(grep -Eo "cases.json: [0-9]+ executed of [0-9]+" "$LOGS/core.log" | grep -Eo "[0-9]+ executed of [0-9]+" | sed 's/ executed of /\//' | head -n 1) případů z fixture"
 else
   fail "selhalo" "$LOGS/core.log"
   errors_from "$LOGS/core.log"
