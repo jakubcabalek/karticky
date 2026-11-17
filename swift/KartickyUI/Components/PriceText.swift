@@ -21,11 +21,15 @@ public struct PriceText: View {
             Text(value.map { formatPrice($0, currency) } ?? "–")
                 .foregroundStyle(value == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.kartickyAccent))
                 .fontWeight(.semibold)
+                .lineLimit(1)
+                .fixedSize()
             if showsChange, let change {
                 Label(formatPrice(abs(change), currency), systemImage: change < 0 ? "arrow.down" : "arrow.up")
                     .labelStyle(.titleAndIcon)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(change < 0 ? Color.kartickyPositive : .secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             }
         }
         .monospacedDigit()

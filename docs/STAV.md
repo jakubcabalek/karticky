@@ -6,15 +6,13 @@ Agenti si nic nepamatují mezi sezeními. Tady je, kde se skončilo. Na začátk
 
 | Agent | Větev | Co | Stav |
 | --- | --- | --- | --- |
-| Claude (Mac) | `claude/swift-zaklad` | Fáze 0 a 1: kostra v Xcode, navigace, komponenty | rozpracováno |
+| – | – | – | – |
 
 ## Fronta (Swift, podle docs/swiftui-plan.md)
 
-1. **Fáze 0** – `xcodegen generate`, rozchodit kostru (psaná bez Xcode), `scripts/swift-check.sh` zelený.
-2. **Fáze 1** – navigace (`TabView` + tlačítko Skenovat) a komponenty z `docs/swiftui-design.md`, náhledy a snapshoty s mock daty.
-3. **Fáze 2** – knihovna offline, hledání s filtry, detail karty, Sbírka, Wishlist.
-4. **Fáze 3** – šanony, import/export CSV.
-5. Fáze 4–7 podle plánu.
+1. **Fáze 2** – knihovna offline, hledání s filtry, detail karty, Sbírka, Wishlist.
+2. **Fáze 3** – šanony, import/export CSV.
+3. Fáze 4–7 podle plánu.
 
 ## Pro Jakuba
 
@@ -24,3 +22,4 @@ Agenti si nic nepamatují mezi sezeními. Tady je, kde se skončilo. Na začátk
 ## Hotovo
 
 - 17. 11. 2026 – plán přepisu, kostra `swift/`, testovací data z TS (PR #8).
+- 17. 11. 2026 – fáze 0 a 1 (`claude/swift-zaklad`): kostra jde přeložit beze změn; navigace s vlastní skleněnou lištou (4 záložky + kulaté Skenovat; systémová záložka s rolí hledání se na iOS 27 neoddělí), komponenty `CardImage` (cache v `Caches/cards/`), `FoilShine`, `ManaDots`, `PriceText`, `ColorIdentityGradient`, `CardSummary` + mock data, `formatPrice` v KartickyCore (6 případů z fixture), snapshoty obrazovek a komponent. Snapshoty obrazovek jdou jen s `drawHierarchyInKeyWindow: true` (jinak prázdné) a s tolerancí barvy kvůli sklu.
