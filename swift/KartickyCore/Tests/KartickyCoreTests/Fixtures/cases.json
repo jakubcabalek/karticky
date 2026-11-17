@@ -1920,6 +1920,60 @@
   },
   {
    "module": "cardData",
+   "function": "formatPrice",
+   "args": [
+    0.25,
+    "eur"
+   ],
+   "result": "0,25 €"
+  },
+  {
+   "module": "cardData",
+   "function": "formatPrice",
+   "args": [
+    12.5,
+    "eur"
+   ],
+   "result": "12,50 €"
+  },
+  {
+   "module": "cardData",
+   "function": "formatPrice",
+   "args": [
+    1234.567,
+    "eur"
+   ],
+   "result": "1 234,57 €"
+  },
+  {
+   "module": "cardData",
+   "function": "formatPrice",
+   "args": [
+    1234567.8,
+    "usd"
+   ],
+   "result": "1 234 567,80 US$"
+  },
+  {
+   "module": "cardData",
+   "function": "formatPrice",
+   "args": [
+    0,
+    "usd"
+   ],
+   "result": "0,00 US$"
+  },
+  {
+   "module": "cardData",
+   "function": "formatPrice",
+   "args": [
+    -3.1,
+    "eur"
+   ],
+   "result": "-3,10 €"
+  },
+  {
+   "module": "cardData",
    "function": "libraryCardIds",
    "args": [
     {
