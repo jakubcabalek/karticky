@@ -2,7 +2,7 @@ import Foundation
 
 /// Libovolná JSON hodnota. Slouží k zachování neznámých polí při načtení a uložení
 /// (data musí přežít cestu přes starší i novější verzi aplikace) a k testům z fixture.
-public enum JSONValue: Codable, Equatable, Sendable {
+public enum JSONValue: Codable, Hashable, Sendable {
     case null
     case bool(Bool)
     case number(Double)
@@ -43,4 +43,9 @@ public enum JSONValue: Codable, Equatable, Sendable {
         if case .object(let object) = self { return object[key] }
         return nil
     }
+
+    public var stringValue: String? { if case .string(let value) = self { value } else { nil } }
+    public var numberValue: Double? { if case .number(let value) = self { value } else { nil } }
+    public var objectValue: [String: JSONValue]? { if case .object(let value) = self { value } else { nil } }
+    public var arrayValue: [JSONValue]? { if case .array(let value) = self { value } else { nil } }
 }
