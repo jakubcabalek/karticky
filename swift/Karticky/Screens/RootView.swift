@@ -116,7 +116,11 @@ struct AppTabBar: View {
             .frame(maxWidth: .infinity, minHeight: 52)
             .background {
                 if selected {
-                    Capsule().fill(.primary.opacity(0.1)).matchedGeometryEffect(id: "tab", in: highlight)
+                    // Hustý materiál pod vybranou záložkou: popisek je čitelný i nad pestrými kartami.
+                    Capsule()
+                        .fill(.thickMaterial)
+                        .overlay(Capsule().fill(Color.kartickyAccent.opacity(0.14)))
+                        .matchedGeometryEffect(id: "tab", in: highlight)
                 }
             }
             .contentShape(Capsule())

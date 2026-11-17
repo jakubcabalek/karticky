@@ -45,7 +45,7 @@ struct CollectionScreen: View {
             }
             .navigationTitle("Sbírka")
             .searchable(
-                text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Hledat ve sbírce i na Scryfallu"
+                text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Hledat ve sbírce i na Scryfallu"
             )
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
